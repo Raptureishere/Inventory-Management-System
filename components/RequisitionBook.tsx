@@ -233,10 +233,10 @@ const RequisitionBook: React.FC<RequisitionBookProps> = ({ user }) => {
         navigate(`/store-issuing-voucher/${requisitionId}`);
     };
 
-    const handleReject = (requisitionId: number) => {
-        if (window.confirm('Are you sure you want to reject this requisition? This action cannot be undone.')) {
+    const handleCancel = (requisitionId: number) => {
+        if (window.confirm('Are you sure you want to cancel this requisition? This action will set the status to Cancelled and it cannot be undone.')) {
             const updatedRequisitions = requisitions.map(req =>
-                req.id === requisitionId ? { ...req, status: RequisitionStatus.REJECTED } : req
+                req.id === requisitionId ? { ...req, status: RequisitionStatus.CANCELLED } : req
             );
             setRequisitions(updatedRequisitions);
             requisitionStorage.save(updatedRequisitions);
@@ -357,53 +357,57 @@ const RequisitionBook: React.FC<RequisitionBookProps> = ({ user }) => {
                                             req.status === RequisitionStatus.PENDING ? 'bg-yellow-200 text-yellow-800' :
                                             req.status === RequisitionStatus.FORWARDED ? 'bg-blue-200 text-blue-800' :
                                             req.status === RequisitionStatus.ISSUED ? 'bg-green-200 text-green-800' :
-                                            req.status === RequisitionStatus.REJECTED ? 'bg-red-200 text-red-800' : ''
+                                            req.status === RequisitionStatus.CANCELLED ? 'bg-gray-200 text-gray-800' : ''
                                           }`}>{req.status}</span>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center space-x-2">
-                                            {user && user.role === 'admin' && req.status === RequisitionStatus.PENDING && (
+                                            {user?.role === 'admin' && (
                                                 <>
-                                                     <button 
-                                                        onClick={() => handleEditClick(req)}
-                                                        className="text-blue-600 hover:text-blue-800"
-                                                        title="Edit Requisition"
-                                                    >
-                                                        <i className="fas fa-edit"></i>
-                                                    </button>
+                                                    {req.status === RequisitionStatus.PENDING && (
+                                                        <>
+                                                            <button 
+                                                                onClick={() => handleEditClick(req)}
+                                                                className="text-blue-600 hover:text-blue-800"
+                                                                title="Edit Requisition"
+                                                            >
+                                                                <i className="fas fa-edit"></i>
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => handleForward(req.id)}
+                                                                className="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600"
+                                                            >
+                                                                Forward
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                    {req.status === RequisitionStatus.FORWARDED && (
+                                                        <>
+                                                            <button 
+                                                                onClick={() => navigate(`/store-issuing-voucher/${req.id}`)}
+                                                                className="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600"
+                                                            >
+                                                                Process
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                    {(req.status === RequisitionStatus.PENDING || req.status === RequisitionStatus.FORWARDED) && (
+                                                        <button
+                                                            onClick={() => handleCancel(req.id)}
+                                                            className="bg-gray-500 text-white px-3 py-1 rounded text-xs hover:bg-gray-600"
+                                                            title="Cancel Requisition"
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    )}
                                                     <button 
-                                                        onClick={() => handleForward(req.id)}
-                                                        className="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600"
+                                                        onClick={() => handleDelete(req.id)} 
+                                                        className="text-red-600 hover:text-red-800 px-2"
+                                                        title="Delete Requisition"
                                                     >
-                                                        Forward
+                                                        <i className="fas fa-trash"></i>
                                                     </button>
                                                 </>
-                                            )}
-                                            {user && user.role === 'admin' && req.status === RequisitionStatus.FORWARDED && (
-                                                <>
-                                                    <button 
-                                                        onClick={() => navigate(`/store-issuing-voucher/${req.id}`)}
-                                                        className="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600"
-                                                    >
-                                                        Process
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleReject(req.id)}
-                                                        className="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600"
-                                                        title="Reject Requisition"
-                                                    >
-                                                        Reject
-                                                    </button>
-                                                </>
-                                            )}
-                                            {user && user.role === 'admin' && (
-                                                <button 
-                                                    onClick={() => handleDelete(req.id)} 
-                                                    className="text-red-600 hover:text-red-800 px-2"
-                                                    title="Delete Requisition"
-                                                >
-                                                    <i className="fas fa-trash"></i>
-                                                </button>
                                             )}
                                         </div>
                                     </td>

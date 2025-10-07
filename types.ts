@@ -35,7 +35,7 @@ export enum RequisitionStatus {
   PENDING = 'Pending',
   FORWARDED = 'Forwarded',
   ISSUED = 'Issued',
-  REJECTED = 'Rejected',
+  CANCELLED = 'Cancelled',
 }
 
 export interface Requisition {
