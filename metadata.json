@@ -1,0 +1,5 @@
+{
+  "name": "Hospital Inventory Management System",
+  "description": "A comprehensive system for managing hospital inventory, including tracking items, handling departmental requisitions, and generating reports.",
+  "requestFramePermissions": []
+}
