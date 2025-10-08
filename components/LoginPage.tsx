@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User } from '../types';
-import { userStorage } from '../services/storageService';
+import { apiService } from '../services/apiService';
 
 interface LoginPageProps {
   onLogin: (user: User) => void;
@@ -10,20 +10,25 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const foundUser = userStorage.get().find(
-      (u) => u.username === username && u.password === password
-    );
+    setIsLoading(true);
+    setError('');
 
-    if (foundUser) {
-      setError('');
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password, ...userToLogin } = foundUser;
-      onLogin(userToLogin as User);
-    } else {
-      setError('Invalid username or password');
+    try {
+      const loggedInUser = await apiService.auth.login(username, password);
+      if (loggedInUser) {
+        onLogin(loggedInUser);
+      } else {
+        setError('Invalid username or password');
+      }
+    } catch (err) {
+      setError('Failed to login. Please try again.');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -55,6 +60,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                                 placeholder="admin or sub"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
+                                disabled={isLoading}
                             />
                         </div>
                     </div>
@@ -74,6 +80,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                                 placeholder="admin123 or sub123"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
+                                disabled={isLoading}
                             />
                         </div>
                     </div>
@@ -83,9 +90,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     <div>
                         <button
                         type="submit"
-                        className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-all duration-200"
+                        disabled={isLoading}
+                        className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-all duration-200 disabled:bg-slate-400 disabled:cursor-wait"
                         >
-                        Sign in
+                        {isLoading ? 'Signing in...' : 'Sign in'}
                         </button>
                     </div>
                 </form>

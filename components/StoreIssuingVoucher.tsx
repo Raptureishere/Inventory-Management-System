@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { requisitionStorage, itemStorage, issuedRecordStorage } from '../services/storageService';
+import { apiService } from '../services/apiService';
 import { 
     Requisition, 
     IssuedItem, 
@@ -16,31 +16,55 @@ const StoreIssuingVoucher: React.FC = () => {
     const [requisition, setRequisition] = useState<Requisition | null>(null);
     const [issuedItems, setIssuedItems] = useState<IssuedItem[]>([]);
     const [stockItems, setStockItems] = useState<Item[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const reqId = parseInt(id || '0');
-        const allRequisitions = requisitionStorage.get();
-        const foundRequisition = allRequisitions.find(r => r.id === reqId);
-        const allItems = itemStorage.get();
-        setStockItems(allItems);
-
-        if (foundRequisition) {
-            setRequisition(foundRequisition);
-            const itemsToIssue = foundRequisition.requestedItems.map(reqItem => {
-                const stockItem = allItems.find(stock => stock.id === reqItem.itemId);
-                return {
-                    itemId: reqItem.itemId,
-                    itemName: reqItem.itemName,
-                    requestedQty: reqItem.quantity,
-                    issuedQty: 0, // Default to 0, let the admin decide
-                    balance: stockItem?.quantity || 0,
-                };
-            });
-            setIssuedItems(itemsToIssue);
-        } else {
-            // Handle not found case
+        if (isNaN(reqId) || reqId === 0) {
             navigate('/requisition-book');
+            return;
         }
+
+        const fetchData = async () => {
+            try {
+                setIsLoading(true);
+                setError(null);
+                const [foundRequisition, allItems] = await Promise.all([
+                    apiService.requisitions.getById(reqId),
+                    apiService.items.getAll(),
+                ]);
+
+                if (!foundRequisition) {
+                    throw new Error('Requisition not found');
+                }
+                
+                setStockItems(allItems);
+                setRequisition(foundRequisition);
+
+                const itemsToIssue = foundRequisition.requestedItems.map(reqItem => {
+                    const stockItem = allItems.find(stock => stock.id === reqItem.itemId);
+                    return {
+                        itemId: reqItem.itemId,
+                        itemName: reqItem.itemName,
+                        requestedQty: reqItem.quantity,
+                        issuedQty: 0,
+                        balance: stockItem?.quantity || 0,
+                    };
+                });
+                setIssuedItems(itemsToIssue);
+
+            } catch (err) {
+                setError('Failed to load voucher data.');
+                console.error(err);
+                // Optionally navigate back after a delay
+                // setTimeout(() => navigate('/requisition-book'), 3000);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchData();
     }, [id, navigate]);
 
     const handleIssueQtyChange = (itemId: number, value: number) => {
@@ -56,53 +80,38 @@ const StoreIssuingVoucher: React.FC = () => {
         );
     };
     
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!requisition) return;
 
-        // 1. Update stock quantities
-        const updatedStockItems = [...stockItems];
-        issuedItems.forEach(issuedItem => {
-            const stockItemIndex = updatedStockItems.findIndex(stock => stock.id === issuedItem.itemId);
-            if (stockItemIndex > -1) {
-                updatedStockItems[stockItemIndex].quantity -= issuedItem.issuedQty;
-            }
-        });
-        itemStorage.save(updatedStockItems);
-
-        // 2. Update requisition status
-        const allRequisitions = requisitionStorage.get();
-        const updatedRequisitions = allRequisitions.map(req => 
-            req.id === requisition.id ? { ...req, status: RequisitionStatus.ISSUED } : req
-        );
-        requisitionStorage.save(updatedRequisitions);
-
-        // 3. Create a new issued item record
-        const allIssuedRecords = issuedRecordStorage.get();
-        const newRecordId = allIssuedRecords.length > 0 ? Math.max(...allIssuedRecords.map(r => r.id)) + 1 : 201;
-        const newRecord: IssuedItemRecord = {
-            id: newRecordId,
+        const newVoucherData = {
             requisitionId: requisition.id,
-            voucherId: `SIV-${new Date().getFullYear()}-${String(requisition.id).padStart(3, '0')}`,
             departmentName: requisition.departmentName,
-            issueDate: new Date().toISOString().split('T')[0],
             notes: (e.currentTarget.elements.namedItem('notes') as HTMLTextAreaElement).value,
-            status: IssuedItemStatus.FULLY_PROVIDED, // Could be enhanced to check for partial issues
-            issuedItems: issuedItems
-                .filter(item => item.issuedQty > 0)
-                .map(item => ({
-                    ...item,
-                    balance: (stockItems.find(si => si.id === item.itemId)?.quantity || 0) - item.issuedQty,
-            })),
+            issuedItems: issuedItems.filter(item => item.issuedQty > 0),
         };
-        issuedRecordStorage.save([...allIssuedRecords, newRecord]);
-
-        alert('Items issued successfully!');
-        navigate('/issued-items-record');
+        
+        try {
+            await apiService.issuedRecords.create(newVoucherData);
+            alert('Items issued successfully!');
+            navigate('/issued-items-record');
+        } catch(err) {
+            alert('Failed to issue items. The backend may have detected insufficient stock or another issue.');
+            console.error(err);
+        }
     };
 
+    if (isLoading) {
+        return <div className="text-center py-10">Loading Voucher...</div>;
+    }
+
+    if (error) {
+       return <div className="text-center py-10 text-red-500">{error}</div>;
+    }
+    
     if (!requisition) {
-        return <div>Loading...</div>;
+        // This case should ideally be covered by the error state
+        return <div>Requisition not found.</div>;
     }
 
     return (

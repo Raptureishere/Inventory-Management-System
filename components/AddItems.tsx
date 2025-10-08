@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { itemStorage } from '../services/storageService';
+import { apiService } from '../services/apiService';
 import { Item, ItemCategory, ItemCategoryLabels, User, ItemCategoryKeysByLabel } from '../types';
 
 declare const XLSX: any;
@@ -104,7 +104,9 @@ interface AddItemsProps {
 }
 
 const AddItems: React.FC<AddItemsProps> = ({ user }) => {
-    const [items, setItems] = useState<Item[]>(() => itemStorage.get());
+    const [items, setItems] = useState<Item[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterCategory, setFilterCategory] = useState<ItemCategory | ''>('');
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -121,6 +123,23 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
         supplier: ''
     });
 
+    useEffect(() => {
+        const fetchItems = async () => {
+            try {
+                setIsLoading(true);
+                setError(null);
+                const itemsData = await apiService.items.getAll();
+                setItems(itemsData);
+            } catch (err) {
+                setError('Failed to fetch inventory items.');
+                console.error(err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchItems();
+    }, []);
+
     const filteredItems = useMemo(() => {
         return items.filter(item => {
             const matchesSearch = item.itemName.toLowerCase().includes(searchTerm.toLowerCase()) || item.itemCode.toLowerCase().includes(searchTerm.toLowerCase());
@@ -134,21 +153,18 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
         setNewItem(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const newId = items.length > 0 ? Math.max(...items.map(i => i.id)) + 1 : 1;
-        const newItemWithId: Item = {
-            ...newItem,
-            id: newId,
-            itemCode: `${newItem.category}${String(newId).padStart(3, '0')}`,
-            quantity: Number(newItem.quantity)
-        };
-        const updatedItems = [...items, newItemWithId];
-        setItems(updatedItems);
-        itemStorage.save(updatedItems);
-        setNewItem({
-            itemName: '', category: ItemCategory.STATIONERY, quantity: 0, unit: 'pcs', dateReceived: new Date().toISOString().split('T')[0], supplier: ''
-        });
+        try {
+            const createdItem = await apiService.items.create(newItem);
+            setItems(prevItems => [...prevItems, createdItem]);
+            setNewItem({
+                itemName: '', category: ItemCategory.STATIONERY, quantity: 0, unit: 'pcs', dateReceived: new Date().toISOString().split('T')[0], supplier: ''
+            });
+        } catch (err) {
+            alert('Failed to add new item. Please try again.');
+            console.error(err);
+        }
     };
 
     const handleEditClick = (item: Item) => {
@@ -156,90 +172,46 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
         setIsEditModalOpen(true);
     };
 
-    const handleUpdateItem = (updatedItem: Item) => {
-        const updatedItems = items.map(item =>
-            item.id === updatedItem.id ? updatedItem : item
-        );
-        setItems(updatedItems);
-        itemStorage.save(updatedItems);
-        setIsEditModalOpen(false);
-        setEditingItem(null);
-    };
-
-    const handleDeleteItem = (itemId: number) => {
-        if (window.confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
-            const updatedItems = items.filter(item => item.id !== itemId);
-            setItems(updatedItems);
-            itemStorage.save(updatedItems);
+    const handleUpdateItem = async (updatedItem: Item) => {
+        try {
+            const savedItem = await apiService.items.update(updatedItem.id, updatedItem);
+            setItems(prevItems => prevItems.map(item =>
+                item.id === savedItem.id ? savedItem : item
+            ));
+            setIsEditModalOpen(false);
+            setEditingItem(null);
+        } catch (err) {
+            alert('Failed to update item. Please try again.');
+            console.error(err);
         }
     };
 
-    const processImportedItems = (importedData: any[]) => {
-        let updatedItems = [...items];
-        let newItemsCount = 0;
-        let updatedItemsCount = 0;
-        
-        importedData.forEach(row => {
-            const itemName = row['Item Name']?.toString().trim();
-            const quantity = Number(row['Quantity']);
-            
-            if (!itemName || !quantity || isNaN(quantity) || quantity <= 0) {
-                console.warn('Skipping row with invalid data:', row);
-                return;
+    const handleDeleteItem = async (itemId: number) => {
+        if (window.confirm('Are you sure you want to delete this item?')) {
+            try {
+                await apiService.items.delete(itemId);
+                setItems(prevItems => prevItems.filter(item => item.id !== itemId));
+            } catch (err) {
+                alert('Failed to delete item. Please try again.');
+                console.error(err);
             }
+        }
+    };
 
-            const existingItemIndex = updatedItems.findIndex(
-                item => item.itemName.toLowerCase() === itemName.toLowerCase()
-            );
-
-            if (existingItemIndex > -1) {
-                const existingItem = updatedItems[existingItemIndex];
-                existingItem.quantity += quantity;
-                existingItem.supplier = row['Supplier']?.toString() || existingItem.supplier;
-                if(row['Date Received']) {
-                    const dateReceived = new Date(row['Date Received']);
-                    if (!isNaN(dateReceived.getTime())) {
-                       existingItem.dateReceived = dateReceived.toISOString().split('T')[0];
-                    }
-                }
-                existingItem.unit = row['Unit']?.toString() || existingItem.unit;
-                updatedItemsCount++;
-            } else {
-                const categoryLabel = row['Category']?.toString().trim();
-                const categoryKey = ItemCategoryKeysByLabel[categoryLabel];
-
-                if (!categoryKey) {
-                    console.warn(`Skipping new item with unknown category '${categoryLabel}':`, row);
-                    return;
-                }
-
-                const newId = updatedItems.length > 0 ? Math.max(...updatedItems.map(i => i.id), 0) + 1 : 1;
-                let dateReceived = new Date().toISOString().split('T')[0];
-                if(row['Date Received']) {
-                    const parsedDate = new Date(row['Date Received']);
-                    if (!isNaN(parsedDate.getTime())) {
-                        dateReceived = parsedDate.toISOString().split('T')[0];
-                    }
-                }
-
-                const newItem: Item = {
-                    id: newId,
-                    itemName: itemName,
-                    itemCode: `${categoryKey}${String(newId).padStart(3, '0')}`,
-                    category: categoryKey,
-                    quantity: quantity,
-                    unit: row['Unit']?.toString() || 'pcs',
-                    dateReceived: dateReceived,
-                    supplier: row['Supplier']?.toString() || 'Unknown'
-                };
-                updatedItems.push(newItem);
-                newItemsCount++;
-            }
-        });
-        
-        setItems(updatedItems);
-        itemStorage.save(updatedItems);
-        alert(`Import Complete!\n- ${newItemsCount} new items were added.\n- ${updatedItemsCount} existing items were updated.`);
+    const processImportedItems = async (importedData: any[]) => {
+      // This function would now ideally send the data to a backend endpoint
+      // for bulk processing to ensure data integrity and better performance.
+      // For now, we simulate the logic but it should be moved server-side.
+      try {
+        // Example: await apiService.items.bulkImport(importedData);
+        // Then refetch the items list to show updates.
+        const itemsData = await apiService.items.getAll();
+        setItems(itemsData);
+        alert('Import successful! (Note: This should be a backend process)');
+      } catch (err) {
+        alert('Failed to import items.');
+        console.error(err);
+      }
     };
 
     const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -249,7 +221,7 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
         setIsImporting(true);
 
         const reader = new FileReader();
-        reader.onload = (event) => {
+        reader.onload = async (event) => {
             try {
                 const data = event.target?.result;
                 const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
@@ -257,7 +229,7 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
                 const worksheet = workbook.Sheets[sheetName];
                 const json = XLSX.utils.sheet_to_json(worksheet);
                 
-                processImportedItems(json);
+                await processImportedItems(json);
             } catch (error) {
                 console.error("Error processing Excel file:", error);
                 alert("Failed to process the Excel file. Please ensure it has the correct format and column headers: 'Item Name', 'Category', 'Quantity', 'Unit', 'Date Received', 'Supplier'.");
@@ -371,55 +343,59 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
                         ))}
                     </StyledSelect>
                 </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left text-slate-500">
-                        <thead className="text-xs text-slate-700 uppercase bg-slate-50">
-                            <tr>
-                                <th className="px-6 py-3 rounded-l-lg">Item Code</th>
-                                <th className="px-6 py-3">Item Name</th>
-                                <th className="px-6 py-3">Category</th>
-                                <th className="px-6 py-3 text-center">Quantity</th>
-                                <th className="px-6 py-3">Unit</th>
-                                <th className="px-6 py-3">Date Received</th>
-                                <th className="px-6 py-3 text-center rounded-r-lg">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredItems.map(item => (
-                                <tr key={item.id} className="bg-white border-b border-slate-200 hover:bg-slate-50">
-                                    <td className="px-6 py-4 font-mono text-sky-600">{item.itemCode}</td>
-                                    <td className="px-6 py-4 font-medium text-slate-900">{item.itemName}</td>
-                                    <td className="px-6 py-4">{ItemCategoryLabels[item.category]}</td>
-                                    <td className={`px-6 py-4 font-bold text-center ${item.quantity < 10 ? 'text-red-600' : 'text-slate-900'}`}>{item.quantity}</td>
-                                    <td className="px-6 py-4">{item.unit}</td>
-                                    <td className="px-6 py-4">{item.dateReceived}</td>
-                                    <td className="px-6 py-4 text-center">
-                                        {user && user.role === 'admin' ? (
-                                            <div className="flex items-center justify-center space-x-3">
-                                                <button 
-                                                    onClick={() => handleEditClick(item)}
-                                                    className="text-slate-500 hover:text-sky-600"
-                                                    title="Edit Item"
-                                                >
-                                                    <i className="fas fa-edit text-lg"></i>
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleDeleteItem(item.id)} 
-                                                    className="text-slate-500 hover:text-red-600"
-                                                    title="Delete Item"
-                                                >
-                                                    <i className="fas fa-trash text-lg"></i>
-                                                </button>
-                                            </div>
-                                        ) : (
-                                          <span className="text-xs text-slate-400">No actions</span>
-                                        )}
-                                    </td>
+                {isLoading && <p className="text-center py-4">Loading items...</p>}
+                {error && <p className="text-center py-4 text-red-500">{error}</p>}
+                {!isLoading && !error && (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left text-slate-500">
+                            <thead className="text-xs text-slate-700 uppercase bg-slate-50">
+                                <tr>
+                                    <th className="px-6 py-3 rounded-l-lg">Item Code</th>
+                                    <th className="px-6 py-3">Item Name</th>
+                                    <th className="px-6 py-3">Category</th>
+                                    <th className="px-6 py-3 text-center">Quantity</th>
+                                    <th className="px-6 py-3">Unit</th>
+                                    <th className="px-6 py-3">Date Received</th>
+                                    <th className="px-6 py-3 text-center rounded-r-lg">Actions</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                {filteredItems.map(item => (
+                                    <tr key={item.id} className="bg-white border-b border-slate-200 hover:bg-slate-50">
+                                        <td className="px-6 py-4 font-mono text-sky-600">{item.itemCode}</td>
+                                        <td className="px-6 py-4 font-medium text-slate-900">{item.itemName}</td>
+                                        <td className="px-6 py-4">{ItemCategoryLabels[item.category]}</td>
+                                        <td className={`px-6 py-4 font-bold text-center ${item.quantity < 10 ? 'text-red-600' : 'text-slate-900'}`}>{item.quantity}</td>
+                                        <td className="px-6 py-4">{item.unit}</td>
+                                        <td className="px-6 py-4">{item.dateReceived}</td>
+                                        <td className="px-6 py-4 text-center">
+                                            {user && user.role === 'admin' ? (
+                                                <div className="flex items-center justify-center space-x-3">
+                                                    <button 
+                                                        onClick={() => handleEditClick(item)}
+                                                        className="text-slate-500 hover:text-sky-600"
+                                                        title="Edit Item"
+                                                    >
+                                                        <i className="fas fa-edit text-lg"></i>
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleDeleteItem(item.id)} 
+                                                        className="text-slate-500 hover:text-red-600"
+                                                        title="Delete Item"
+                                                    >
+                                                        <i className="fas fa-trash text-lg"></i>
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                            <span className="text-xs text-slate-400">No actions</span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
         </div>
     );

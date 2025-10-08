@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './components/LoginPage';
 import Dashboard from './components/Dashboard';
@@ -10,22 +10,38 @@ import Reports from './components/Reports';
 import Sidebar from './components/Sidebar';
 import UserManagement from './components/UserManagement';
 import { User } from './types';
+import { apiService } from './services/apiService';
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<User | null>(() => {
-    const storedUser = localStorage.getItem('hims_user');
-    return storedUser ? JSON.parse(storedUser) : null;
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Check for an existing session on app load
+  useEffect(() => {
+    const checkSession = async () => {
+      const storedUser = sessionStorage.getItem('hims_user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+      setIsLoading(false);
+    };
+    checkSession();
+  }, []);
 
   const handleLogin = useCallback((loggedInUser: User) => {
-    localStorage.setItem('hims_user', JSON.stringify(loggedInUser));
+    sessionStorage.setItem('hims_user', JSON.stringify(loggedInUser));
     setUser(loggedInUser);
   }, []);
 
-  const handleLogout = useCallback(() => {
-    localStorage.removeItem('hims_user');
+  const handleLogout = useCallback(async () => {
+    await apiService.auth.logout();
+    sessionStorage.removeItem('hims_user');
     setUser(null);
   }, []);
+  
+  if (isLoading) {
+    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+  }
 
   return (
     <HashRouter>

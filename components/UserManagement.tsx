@@ -1,46 +1,66 @@
-import React, { useState } from 'react';
-import { userStorage } from '../services/storageService';
+import React, { useState, useEffect } from 'react';
+import { apiService } from '../services/apiService';
 import { User } from '../types';
 
 const UserManagement: React.FC = () => {
-    const [users, setUsers] = useState<User[]>(() => userStorage.get());
+    const [users, setUsers] = useState<User[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string|null>(null);
+    const [formError, setFormError] = useState('');
     const [newUser, setNewUser] = useState({ username: '', password: '' });
-    const [error, setError] = useState('');
+
+    useEffect(() => {
+        const fetchUsers = async () => {
+            try {
+                setIsLoading(true);
+                setError(null);
+                const usersData = await apiService.users.getAll();
+                setUsers(usersData);
+            } catch (err) {
+                setError('Failed to fetch users.');
+                console.error(err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchUsers();
+    }, []);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setNewUser({ ...newUser, [e.target.name]: e.target.value });
     };
 
-    const handleAddUser = (e: React.FormEvent) => {
+    const handleAddUser = async (e: React.FormEvent) => {
         e.preventDefault();
+        setFormError('');
         if (!newUser.username || !newUser.password) {
-            setError('Username and password are required.');
+            setFormError('Username and password are required.');
             return;
         }
         if (users.some(u => u.username === newUser.username)) {
-            setError('Username already exists.');
+            setFormError('Username already exists.');
             return;
         }
 
-        const newUserObject: User = {
-            id: users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1,
-            username: newUser.username,
-            password: newUser.password,
-            role: 'subordinate',
-        };
-        const updatedUsers = [...users, newUserObject];
-        setUsers(updatedUsers);
-        userStorage.save(updatedUsers);
-        
-        setNewUser({ username: '', password: '' });
-        setError('');
+        try {
+            const createdUser = await apiService.users.create(newUser.username, newUser.password);
+            setUsers(prevUsers => [...prevUsers, createdUser]);
+            setNewUser({ username: '', password: '' });
+        } catch (err) {
+            setFormError('Failed to add user. Please try again.');
+            console.error(err);
+        }
     };
 
-    const handleDeleteUser = (userId: number) => {
+    const handleDeleteUser = async (userId: number) => {
         if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-            const updatedUsers = users.filter(user => user.id !== userId);
-            setUsers(updatedUsers);
-            userStorage.save(updatedUsers);
+            try {
+                await apiService.users.delete(userId);
+                setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
+            } catch (err) {
+                alert('Failed to delete user.');
+                console.error(err);
+            }
         }
     };
 
@@ -76,7 +96,7 @@ const UserManagement: React.FC = () => {
                                 required
                             />
                         </div>
-                        {error && <p className="text-sm text-red-500">{error}</p>}
+                        {formError && <p className="text-sm text-red-500">{formError}</p>}
                         <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
                             Add User
                         </button>
@@ -84,38 +104,42 @@ const UserManagement: React.FC = () => {
                 </div>
                 <div className="bg-white p-6 rounded-lg shadow-md">
                     <h2 className="text-xl font-semibold mb-4">User List</h2>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left text-gray-500">
-                            <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                                <tr>
-                                    <th className="px-6 py-3">ID</th>
-                                    <th className="px-6 py-3">Username</th>
-                                    <th className="px-6 py-3">Role</th>
-                                    <th className="px-6 py-3">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {users.map(user => (
-                                    <tr key={user.id} className="bg-white border-b hover:bg-gray-50">
-                                        <td className="px-6 py-4">{user.id}</td>
-                                        <td className="px-6 py-4 font-medium text-gray-900">{user.username}</td>
-                                        <td className="px-6 py-4 capitalize">{user.role}</td>
-                                        <td className="px-6 py-4">
-                                            {user.role === 'subordinate' && (
-                                                <button 
-                                                    onClick={() => handleDeleteUser(user.id)}
-                                                    className="text-red-600 hover:text-red-800"
-                                                    title="Delete User"
-                                                >
-                                                    <i className="fas fa-trash"></i>
-                                                </button>
-                                            )}
-                                        </td>
+                     {isLoading && <p className="text-center py-4">Loading users...</p>}
+                     {error && <p className="text-center py-4 text-red-500">{error}</p>}
+                     {!isLoading && !error && (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-left text-gray-500">
+                                <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                                    <tr>
+                                        <th className="px-6 py-3">ID</th>
+                                        <th className="px-6 py-3">Username</th>
+                                        <th className="px-6 py-3">Role</th>
+                                        <th className="px-6 py-3">Actions</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                    {users.map(user => (
+                                        <tr key={user.id} className="bg-white border-b hover:bg-gray-50">
+                                            <td className="px-6 py-4">{user.id}</td>
+                                            <td className="px-6 py-4 font-medium text-gray-900">{user.username}</td>
+                                            <td className="px-6 py-4 capitalize">{user.role}</td>
+                                            <td className="px-6 py-4">
+                                                {user.role === 'subordinate' && (
+                                                    <button 
+                                                        onClick={() => handleDeleteUser(user.id)}
+                                                        className="text-red-600 hover:text-red-800"
+                                                        title="Delete User"
+                                                    >
+                                                        <i className="fas fa-trash"></i>
+                                                    </button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                     )}
                 </div>
             </div>
         </div>

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { itemStorage, requisitionStorage, issuedRecordStorage } from '../services/storageService';
+import { apiService } from '../services/apiService';
 import { Item, ItemCategory, ItemCategoryLabels, Requisition, IssuedItemRecord } from '../types';
 
 const COLORS = ['#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
@@ -158,11 +158,17 @@ const TopIssuedItemsChart: React.FC<{ items: Item[], issuedRecords: IssuedItemRe
             .slice(0, 5);
     }, [items, issuedRecords]);
     
-    const legendPayload = data.map((entry, index) => ({
-        value: entry.name,
-        type: 'circle',
-        color: COLORS[index % COLORS.length]
-    }));
+    // Fix: Replaced `payload` prop with `content` prop for the Legend component to avoid TypeScript errors.
+    const renderCustomLegend = () => (
+        <ul className="list-none p-0 m-0 text-sm text-slate-700">
+            {data.map((entry, index) => (
+                <li key={`item-${index}`} className="flex items-center mb-1">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: COLORS[index % COLORS.length] }}></span>
+                    <span>{entry.name}</span>
+                </li>
+            ))}
+        </ul>
+    );
 
     if (data.length === 0) {
         return (
@@ -183,7 +189,7 @@ const TopIssuedItemsChart: React.FC<{ items: Item[], issuedRecords: IssuedItemRe
                     <XAxis type="number" />
                     <YAxis type="category" dataKey="name" hide={true} />
                     <Tooltip cursor={{ fill: 'rgba(240, 240, 240, 0.5)' }} contentStyle={{ background: 'white', borderRadius: '0.75rem', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}/>
-                    <Legend payload={legendPayload} layout="vertical" verticalAlign="middle" align="right" />
+                    <Legend content={renderCustomLegend} layout="vertical" verticalAlign="middle" align="right" />
                     <Bar dataKey="quantity" name="Quantity Issued" barSize={30} radius={[0, 10, 10, 0]}>
                        {data.map((entry, index) => (
                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -200,20 +206,44 @@ const Dashboard: React.FC = () => {
     const [items, setItems] = useState<Item[]>([]);
     const [requisitions, setRequisitions] = useState<Requisition[]>([]);
     const [issuedRecords, setIssuedRecords] = useState<IssuedItemRecord[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-      setItems(itemStorage.get());
-      setRequisitions(requisitionStorage.get());
-      setIssuedRecords(issuedRecordStorage.get());
+      const fetchData = async () => {
+        try {
+          setIsLoading(true);
+          setError(null);
+          const [itemsData, requisitionsData, issuedRecordsData] = await Promise.all([
+            apiService.items.getAll(),
+            apiService.requisitions.getAll(),
+            apiService.issuedRecords.getAll(),
+          ]);
+          setItems(itemsData);
+          setRequisitions(requisitionsData);
+          setIssuedRecords(issuedRecordsData);
+        } catch (err) {
+          setError('Failed to load dashboard data. Please try refreshing the page.');
+          console.error(err);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      fetchData();
     }, []);
 
-    const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-    const lowStockItems = items.filter(item => item.quantity < 10);
-    const pendingRequisitionsCount = requisitions.filter(r => r.status === 'Pending').length;
-    const recentRequisitions = [...requisitions].sort((a, b) => new Date(b.dateRequested).getTime() - new Date(a.dateRequested).getTime()).slice(0, 5);
+    const totalItems = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
+    const lowStockItems = useMemo(() => items.filter(item => item.quantity < 10), [items]);
+    const pendingRequisitionsCount = useMemo(() => requisitions.filter(r => r.status === 'Pending').length, [requisitions]);
+    const recentRequisitions = useMemo(() => [...requisitions].sort((a, b) => new Date(b.dateRequested).getTime() - new Date(a.dateRequested).getTime()).slice(0, 5), [requisitions]);
     
-    if (items.length === 0 && requisitions.length === 0) {
-      return <div>Loading Dashboard Data...</div>
+    if (isLoading) {
+      return <div className="text-center py-10">Loading Dashboard Data...</div>;
+    }
+
+    if (error) {
+       return <div className="text-center py-10 text-red-500">{error}</div>;
     }
 
     return (

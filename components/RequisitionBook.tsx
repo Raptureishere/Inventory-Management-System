@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DEPARTMENTS } from '../constants';
-import { requisitionStorage, itemStorage } from '../services/storageService';
+import { DEPARTMENTS } from '../types';
+import { apiService } from '../services/apiService';
 import { Requisition, RequisitionStatus, User, RequestedItem, Item } from '../types';
 
 const StyledInput: React.FC<React.InputHTMLAttributes<HTMLInputElement>> = (props) => (
@@ -232,14 +232,38 @@ interface RequisitionBookProps {
 }
 
 const RequisitionBook: React.FC<RequisitionBookProps> = ({ user }) => {
-    const [requisitions, setRequisitions] = useState<Requisition[]>(() => requisitionStorage.get());
-    const [availableItems] = useState<Item[]>(() => itemStorage.get());
+    const [requisitions, setRequisitions] = useState<Requisition[]>([]);
+    const [availableItems, setAvailableItems] = useState<Item[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
     const [filterDept, setFilterDept] = useState('');
     const [filterStatus, setFilterStatus] = useState<RequisitionStatus | ''>('');
     const navigate = useNavigate();
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingRequisition, setEditingRequisition] = useState<Requisition | null>(null);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setIsLoading(true);
+                setError(null);
+                const [reqsData, itemsData] = await Promise.all([
+                    apiService.requisitions.getAll(),
+                    apiService.items.getAll()
+                ]);
+                setRequisitions(reqsData);
+                setAvailableItems(itemsData);
+            } catch (err) {
+                setError('Failed to fetch data.');
+                console.error(err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchData();
+    }, []);
 
     const filteredRequisitions = useMemo(() => {
         return requisitions.filter(req => {
@@ -249,43 +273,45 @@ const RequisitionBook: React.FC<RequisitionBookProps> = ({ user }) => {
         }).sort((a, b) => new Date(b.dateRequested).getTime() - new Date(a.dateRequested).getTime());
     }, [requisitions, filterDept, filterStatus]);
 
-    const handleForward = (requisitionId: number) => {
-        const updatedRequisitions = requisitions.map(req =>
-            req.id === requisitionId ? { ...req, status: RequisitionStatus.FORWARDED } : req
-        );
-        setRequisitions(updatedRequisitions);
-        requisitionStorage.save(updatedRequisitions);
-        navigate(`/store-issuing-voucher/${requisitionId}`);
+    const handleUpdateStatus = async (requisitionId: number, status: RequisitionStatus) => {
+         try {
+            await apiService.requisitions.updateStatus(requisitionId, status);
+            setRequisitions(prev => prev.map(r => r.id === requisitionId ? { ...r, status } : r));
+            if (status === RequisitionStatus.FORWARDED) {
+                navigate(`/store-issuing-voucher/${requisitionId}`);
+            }
+        } catch (err) {
+            alert(`Failed to update status to ${status}.`);
+            console.error(err);
+        }
     };
 
     const handleCancel = (requisitionId: number) => {
         if (window.confirm('Are you sure you want to cancel this requisition? This action will set the status to Cancelled and it cannot be undone.')) {
-            const updatedRequisitions = requisitions.map(req =>
-                req.id === requisitionId ? { ...req, status: RequisitionStatus.CANCELLED } : req
-            );
-            setRequisitions(updatedRequisitions);
-            requisitionStorage.save(updatedRequisitions);
+            handleUpdateStatus(requisitionId, RequisitionStatus.CANCELLED);
         }
     };
-
-    const handleDelete = (requisitionId: number) => {
+    
+    const handleDelete = async (requisitionId: number) => {
         if (window.confirm('Are you sure you want to permanently delete this requisition? This action cannot be undone.')) {
-            const updatedRequisitions = requisitions.filter(req => req.id !== requisitionId);
-            setRequisitions(updatedRequisitions);
-            requisitionStorage.save(updatedRequisitions);
+           try {
+               await apiService.requisitions.delete(requisitionId);
+               setRequisitions(prev => prev.filter(r => r.id !== requisitionId));
+           } catch(err) {
+               alert('Failed to delete requisition.');
+               console.error(err);
+           }
         }
     };
 
-     const handleCreateRequisition = (newReqData: Omit<Requisition, 'id' | 'dateRequested' | 'status'>) => {
-        const newRequisition: Requisition = {
-            ...newReqData,
-            id: requisitions.length > 0 ? Math.max(...requisitions.map(r => r.id)) + 1 : 101,
-            dateRequested: new Date().toISOString(),
-            status: RequisitionStatus.PENDING,
-        };
-        const updatedRequisitions = [...requisitions, newRequisition];
-        setRequisitions(updatedRequisitions);
-        requisitionStorage.save(updatedRequisitions);
+     const handleCreateRequisition = async (newReqData: Omit<Requisition, 'id' | 'dateRequested' | 'status'>) => {
+        try {
+            const createdReq = await apiService.requisitions.create(newReqData);
+            setRequisitions(prev => [...prev, createdReq]);
+        } catch (err) {
+            alert('Failed to create requisition.');
+            console.error(err);
+        }
     };
 
     const handleEditClick = (requisition: Requisition) => {
@@ -293,14 +319,16 @@ const RequisitionBook: React.FC<RequisitionBookProps> = ({ user }) => {
         setIsEditModalOpen(true);
     };
 
-    const handleUpdateRequisition = (updatedRequisition: Requisition) => {
-        const updatedRequisitions = requisitions.map(req => 
-            req.id === updatedRequisition.id ? updatedRequisition : req
-        );
-        setRequisitions(updatedRequisitions);
-        requisitionStorage.save(updatedRequisitions);
-        setIsEditModalOpen(false);
-        setEditingRequisition(null);
+    const handleUpdateRequisition = async (updatedRequisition: Requisition) => {
+        try {
+            const savedReq = await apiService.requisitions.update(updatedRequisition.id, updatedRequisition);
+            setRequisitions(prev => prev.map(r => r.id === savedReq.id ? savedReq : r));
+            setIsEditModalOpen(false);
+            setEditingRequisition(null);
+        } catch (err) {
+            alert('Failed to update requisition.');
+            console.error(err);
+        }
     };
     
     return (
@@ -350,94 +378,98 @@ const RequisitionBook: React.FC<RequisitionBookProps> = ({ user }) => {
                         )}
                     </div>
                 </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left text-slate-500">
-                        <thead className="text-xs text-slate-700 uppercase bg-slate-50">
-                            <tr>
-                                <th className="px-6 py-3 rounded-l-lg">Req. ID</th>
-                                <th className="px-6 py-3">Department</th>
-                                <th className="px-6 py-3">Date Requested</th>
-                                <th className="px-6 py-3">Items</th>
-                                <th className="px-6 py-3">Status</th>
-                                <th className="px-6 py-3 rounded-r-lg text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredRequisitions.map(req => (
-                                <tr key={req.id} className="bg-white border-b border-slate-200 hover:bg-slate-50">
-                                    <td className="px-6 py-4 font-mono">{req.id}</td>
-                                    <td className="px-6 py-4 font-medium text-slate-900">{req.departmentName}</td>
-                                    <td className="px-6 py-4">{new Date(req.dateRequested).toLocaleString()}</td>
-                                    <td className="px-6 py-4">
-                                        <ul className="space-y-1">
-                                            {req.requestedItems.map(item => (
-                                                <li key={item.itemId}>{item.itemName} <span className="text-xs text-slate-400">(Qty: {item.quantity})</span></li>
-                                            ))}
-                                        </ul>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                         <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${
-                                            req.status === RequisitionStatus.PENDING ? 'bg-amber-100 text-amber-800' :
-                                            req.status === RequisitionStatus.FORWARDED ? 'bg-sky-100 text-sky-800' :
-                                            req.status === RequisitionStatus.ISSUED ? 'bg-emerald-100 text-emerald-800' :
-                                            req.status === RequisitionStatus.CANCELLED ? 'bg-slate-100 text-slate-800' : ''
-                                          }`}>{req.status}</span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center justify-center space-x-2">
-                                            {user?.role === 'admin' && (
-                                                <>
-                                                    {req.status === RequisitionStatus.PENDING && (
-                                                        <>
-                                                            <button 
-                                                                onClick={() => handleEditClick(req)}
-                                                                className="text-slate-500 hover:text-sky-600 p-2"
-                                                                title="Edit Requisition"
-                                                            >
-                                                                <i className="fas fa-edit"></i>
-                                                            </button>
-                                                            <button 
-                                                                onClick={() => handleForward(req.id)}
-                                                                className="bg-sky-500 text-white px-3 py-1 rounded text-xs hover:bg-sky-600"
-                                                            >
-                                                                Forward
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                    {req.status === RequisitionStatus.FORWARDED && (
-                                                        <button 
-                                                            onClick={() => navigate(`/store-issuing-voucher/${req.id}`)}
-                                                            className="bg-emerald-500 text-white px-3 py-1 rounded text-xs hover:bg-emerald-600"
-                                                        >
-                                                            Process
-                                                        </button>
-                                                    )}
-                                                    {(req.status === RequisitionStatus.PENDING || req.status === RequisitionStatus.FORWARDED) && (
-                                                        <button
-                                                            onClick={() => handleCancel(req.id)}
-                                                            className="bg-slate-500 text-white px-3 py-1 rounded text-xs hover:bg-slate-600"
-                                                            title="Cancel Requisition"
-                                                        >
-                                                            Cancel
-                                                        </button>
-                                                    )}
-                                                    <button 
-                                                        onClick={() => handleDelete(req.id)} 
-                                                        className="text-slate-500 hover:text-red-600 p-2"
-                                                        title="Delete Requisition"
-                                                    >
-                                                        <i className="fas fa-trash"></i>
-                                                    </button>
-                                                </>
-                                            )}
-                                             {user?.role !== 'admin' && <span className="text-xs text-slate-400">Admin only</span>}
-                                        </div>
-                                    </td>
+                 {isLoading && <p className="text-center py-4">Loading requisitions...</p>}
+                 {error && <p className="text-center py-4 text-red-500">{error}</p>}
+                 {!isLoading && !error && (
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left text-slate-500">
+                            <thead className="text-xs text-slate-700 uppercase bg-slate-50">
+                                <tr>
+                                    <th className="px-6 py-3 rounded-l-lg">Req. ID</th>
+                                    <th className="px-6 py-3">Department</th>
+                                    <th className="px-6 py-3">Date Requested</th>
+                                    <th className="px-6 py-3">Items</th>
+                                    <th className="px-6 py-3">Status</th>
+                                    <th className="px-6 py-3 rounded-r-lg text-center">Actions</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                {filteredRequisitions.map(req => (
+                                    <tr key={req.id} className="bg-white border-b border-slate-200 hover:bg-slate-50">
+                                        <td className="px-6 py-4 font-mono">{req.id}</td>
+                                        <td className="px-6 py-4 font-medium text-slate-900">{req.departmentName}</td>
+                                        <td className="px-6 py-4">{new Date(req.dateRequested).toLocaleString()}</td>
+                                        <td className="px-6 py-4">
+                                            <ul className="space-y-1">
+                                                {req.requestedItems.map(item => (
+                                                    <li key={item.itemId}>{item.itemName} <span className="text-xs text-slate-400">(Qty: {item.quantity})</span></li>
+                                                ))}
+                                            </ul>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${
+                                                req.status === RequisitionStatus.PENDING ? 'bg-amber-100 text-amber-800' :
+                                                req.status === RequisitionStatus.FORWARDED ? 'bg-sky-100 text-sky-800' :
+                                                req.status === RequisitionStatus.ISSUED ? 'bg-emerald-100 text-emerald-800' :
+                                                req.status === RequisitionStatus.CANCELLED ? 'bg-slate-100 text-slate-800' : ''
+                                            }`}>{req.status}</span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center justify-center space-x-2">
+                                                {user?.role === 'admin' && (
+                                                    <>
+                                                        {req.status === RequisitionStatus.PENDING && (
+                                                            <>
+                                                                <button 
+                                                                    onClick={() => handleEditClick(req)}
+                                                                    className="text-slate-500 hover:text-sky-600 p-2"
+                                                                    title="Edit Requisition"
+                                                                >
+                                                                    <i className="fas fa-edit"></i>
+                                                                </button>
+                                                                <button 
+                                                                    onClick={() => handleUpdateStatus(req.id, RequisitionStatus.FORWARDED)}
+                                                                    className="bg-sky-500 text-white px-3 py-1 rounded text-xs hover:bg-sky-600"
+                                                                >
+                                                                    Forward
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                        {req.status === RequisitionStatus.FORWARDED && (
+                                                            <button 
+                                                                onClick={() => navigate(`/store-issuing-voucher/${req.id}`)}
+                                                                className="bg-emerald-500 text-white px-3 py-1 rounded text-xs hover:bg-emerald-600"
+                                                            >
+                                                                Process
+                                                            </button>
+                                                        )}
+                                                        {(req.status === RequisitionStatus.PENDING || req.status === RequisitionStatus.FORWARDED) && (
+                                                            <button
+                                                                onClick={() => handleCancel(req.id)}
+                                                                className="bg-slate-500 text-white px-3 py-1 rounded text-xs hover:bg-slate-600"
+                                                                title="Cancel Requisition"
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                        )}
+                                                        <button 
+                                                            onClick={() => handleDelete(req.id)} 
+                                                            className="text-slate-500 hover:text-red-600 p-2"
+                                                            title="Delete Requisition"
+                                                        >
+                                                            <i className="fas fa-trash"></i>
+                                                        </button>
+                                                    </>
+                                                )}
+                                                {user?.role !== 'admin' && <span className="text-xs text-slate-400">Admin only</span>}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
         </div>
     );
