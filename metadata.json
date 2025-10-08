@@ -1,5 +1,5 @@
 {
-  "name": "Hospital Inventory Management System",
-  "description": "A comprehensive system for managing hospital inventory, including tracking items, handling departmental requisitions, and generating reports.",
+  "name": "Mother and Child Hospital Inventory System",
+  "description": "A comprehensive system for managing Mother and Child Hospital inventory, including tracking items, handling departmental requisitions, and generating reports.",
   "requestFramePermissions": []
 }

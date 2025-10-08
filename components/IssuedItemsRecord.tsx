@@ -53,7 +53,7 @@ const IssuedRecordDetailsModal: React.FC<{
                 <div ref={printContentRef}>
                     <div className="print-header">
                          <h1 className="text-2xl font-bold text-gray-800">Store Issuing Voucher</h1>
-                         <p>Hospital Inventory Management System</p>
+                         <p>Mother and Child Hospital Inventory System</p>
                     </div>
 
                     <div className="details-grid">

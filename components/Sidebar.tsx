@@ -33,8 +33,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, user }) => {
   return (
     <aside className="w-64 bg-blue-800 text-white flex flex-col h-screen shadow-lg">
       <div className="p-4 border-b border-blue-700">
-        <h1 className="text-2xl font-bold text-center">HIMS</h1>
-        <p className="text-sm text-center text-blue-200">Hospital Inventory</p>
+        <h1 className="text-2xl font-bold text-center">M&H Inv Sys</h1>
+        <p className="text-sm text-center text-blue-200">Mother & Child Hospital</p>
       </div>
       <nav className="flex-1 p-4">
         <ul>

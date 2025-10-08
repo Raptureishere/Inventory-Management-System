@@ -14,6 +14,12 @@ export const ItemCategoryLabels: { [key in ItemCategory]: string } = {
   [ItemCategory.DETERGENTS]: 'Detergents',
 };
 
+export const ItemCategoryKeysByLabel: { [key: string]: ItemCategory } = 
+    Object.entries(ItemCategoryLabels).reduce((acc, [key, label]) => {
+        acc[label] = key as ItemCategory;
+        return acc;
+    }, {} as { [key: string]: ItemCategory });
+
 export interface Item {
   id: number;
   itemName: string;

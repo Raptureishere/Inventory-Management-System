@@ -36,6 +36,15 @@ const UserManagement: React.FC = () => {
         setError('');
     };
 
+    const handleDeleteUser = (userId: number) => {
+        if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+            const updatedUsers = users.filter(user => user.id !== userId);
+            setUsers(updatedUsers);
+            userStorage.save(updatedUsers);
+        }
+    };
+
+
     return (
         <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-6">User Management</h1>
@@ -82,6 +91,7 @@ const UserManagement: React.FC = () => {
                                     <th className="px-6 py-3">ID</th>
                                     <th className="px-6 py-3">Username</th>
                                     <th className="px-6 py-3">Role</th>
+                                    <th className="px-6 py-3">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -90,6 +100,17 @@ const UserManagement: React.FC = () => {
                                         <td className="px-6 py-4">{user.id}</td>
                                         <td className="px-6 py-4 font-medium text-gray-900">{user.username}</td>
                                         <td className="px-6 py-4 capitalize">{user.role}</td>
+                                        <td className="px-6 py-4">
+                                            {user.role === 'subordinate' && (
+                                                <button 
+                                                    onClick={() => handleDeleteUser(user.id)}
+                                                    className="text-red-600 hover:text-red-800"
+                                                    title="Delete User"
+                                                >
+                                                    <i className="fas fa-trash"></i>
+                                                </button>
+                                            )}
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

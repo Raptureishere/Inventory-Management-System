@@ -1,6 +1,8 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { itemStorage } from '../services/storageService';
-import { Item, ItemCategory, ItemCategoryLabels, User } from '../types';
+import { Item, ItemCategory, ItemCategoryLabels, User, ItemCategoryKeysByLabel } from '../types';
+
+declare const XLSX: any;
 
 interface EditItemModalProps {
     isOpen: boolean;
@@ -86,6 +88,8 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
     const [filterCategory, setFilterCategory] = useState<ItemCategory | ''>('');
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<Item | null>(null);
+    const [isImporting, setIsImporting] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     
     const [newItem, setNewItem] = useState<Omit<Item, 'id' | 'itemCode'>>({
         itemName: '',
@@ -149,6 +153,108 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
         }
     };
 
+    const processImportedItems = (importedData: any[]) => {
+        let updatedItems = [...items];
+        let newItemsCount = 0;
+        let updatedItemsCount = 0;
+        
+        importedData.forEach(row => {
+            const itemName = row['Item Name']?.toString().trim();
+            const quantity = Number(row['Quantity']);
+            
+            if (!itemName || !quantity || isNaN(quantity) || quantity <= 0) {
+                console.warn('Skipping row with invalid data:', row);
+                return;
+            }
+
+            const existingItemIndex = updatedItems.findIndex(
+                item => item.itemName.toLowerCase() === itemName.toLowerCase()
+            );
+
+            if (existingItemIndex > -1) {
+                const existingItem = updatedItems[existingItemIndex];
+                existingItem.quantity += quantity;
+                existingItem.supplier = row['Supplier']?.toString() || existingItem.supplier;
+                if(row['Date Received']) {
+                    const dateReceived = new Date(row['Date Received']);
+                    if (!isNaN(dateReceived.getTime())) {
+                       existingItem.dateReceived = dateReceived.toISOString().split('T')[0];
+                    }
+                }
+                existingItem.unit = row['Unit']?.toString() || existingItem.unit;
+                updatedItemsCount++;
+            } else {
+                const categoryLabel = row['Category']?.toString().trim();
+                const categoryKey = ItemCategoryKeysByLabel[categoryLabel];
+
+                if (!categoryKey) {
+                    console.warn(`Skipping new item with unknown category '${categoryLabel}':`, row);
+                    return;
+                }
+
+                const newId = updatedItems.length > 0 ? Math.max(...updatedItems.map(i => i.id), 0) + 1 : 1;
+                let dateReceived = new Date().toISOString().split('T')[0];
+                if(row['Date Received']) {
+                    const parsedDate = new Date(row['Date Received']);
+                    if (!isNaN(parsedDate.getTime())) {
+                        dateReceived = parsedDate.toISOString().split('T')[0];
+                    }
+                }
+
+                const newItem: Item = {
+                    id: newId,
+                    itemName: itemName,
+                    itemCode: `${categoryKey}${String(newId).padStart(3, '0')}`,
+                    category: categoryKey,
+                    quantity: quantity,
+                    unit: row['Unit']?.toString() || 'pcs',
+                    dateReceived: dateReceived,
+                    supplier: row['Supplier']?.toString() || 'Unknown'
+                };
+                updatedItems.push(newItem);
+                newItemsCount++;
+            }
+        });
+        
+        setItems(updatedItems);
+        itemStorage.save(updatedItems);
+        alert(`Import Complete!\n- ${newItemsCount} new items were added.\n- ${updatedItemsCount} existing items were updated.`);
+    };
+
+    const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        
+        setIsImporting(true);
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const data = event.target?.result;
+                const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const json = XLSX.utils.sheet_to_json(worksheet);
+                
+                processImportedItems(json);
+            } catch (error) {
+                console.error("Error processing Excel file:", error);
+                alert("Failed to process the Excel file. Please ensure it has the correct format and column headers: 'Item Name', 'Category', 'Quantity', 'Unit', 'Date Received', 'Supplier'.");
+            } finally {
+                setIsImporting(false);
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
+            }
+        };
+        reader.onerror = () => {
+             console.error("Error reading file");
+             alert("An error occurred while reading the file.");
+             setIsImporting(false);
+        };
+        reader.readAsBinaryString(file);
+    };
+
     return (
         <div>
             <EditItemModal
@@ -161,7 +267,29 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
             <h1 className="text-3xl font-bold text-gray-800 mb-6">Inventory Items</h1>
 
             <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-                <h2 className="text-xl font-semibold mb-4">Add New Item</h2>
+                 <div className="flex justify-between items-center mb-4">
+                     <h2 className="text-xl font-semibold">Add New Item</h2>
+                     {user && user.role === 'admin' && (
+                        <div>
+                             <input 
+                                type="file" 
+                                ref={fileInputRef} 
+                                onChange={handleFileImport} 
+                                style={{ display: 'none' }} 
+                                accept=".xlsx, .xls" 
+                                disabled={isImporting}
+                            />
+                            <button 
+                                onClick={() => fileInputRef.current?.click()} 
+                                className="bg-green-600 text-white p-2 rounded hover:bg-green-700 disabled:bg-gray-400 flex items-center"
+                                disabled={isImporting}
+                            >
+                                <i className={`fas ${isImporting ? 'fa-spinner fa-spin' : 'fa-file-excel'} mr-2`}></i>
+                                {isImporting ? 'Importing...' : 'Import from Excel'}
+                            </button>
+                        </div>
+                     )}
+                </div>
                 <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <input type="text" name="itemName" value={newItem.itemName} onChange={handleInputChange} placeholder="Item Name" required className="p-2 border rounded" />
                     <select name="category" value={newItem.category} onChange={handleInputChange} className="p-2 border rounded">

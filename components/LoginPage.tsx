@@ -32,10 +32,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-lg">
         <div>
           <h2 className="text-3xl font-extrabold text-center text-gray-900">
-            HIMS Login
+            M&H Inv Sys Login
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Hospital Inventory Management System
+            Mother and Child Hospital Inventory System
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

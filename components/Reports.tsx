@@ -41,6 +41,28 @@ const Reports: React.FC = () => {
         })).filter(d => d.stockIn > 0 || d.stockOut > 0).slice(0, 10); // show top 10 with movement
     }, [items, issuedRecords]);
 
+    const stockQuantityByCategoryData = useMemo(() => {
+        const filteredByDate = items.filter(item => {
+            if (filters.dateFrom && item.dateReceived < filters.dateFrom) {
+                return false;
+            }
+            if (filters.dateTo && item.dateReceived > filters.dateTo) {
+                return false;
+            }
+            return true;
+        });
+
+        const categoryTotals = filteredByDate.reduce((acc, item) => {
+            acc[item.category] = (acc[item.category] || 0) + item.quantity;
+            return acc;
+        }, {} as Record<string, number>);
+
+        return Object.entries(categoryTotals).map(([category, totalQuantity]) => ({
+            name: ItemCategoryLabels[category as keyof typeof ItemCategoryLabels],
+            'Total Quantity': totalQuantity,
+        }));
+    }, [items, filters.dateFrom, filters.dateTo]);
+
     return (
         <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-6">Reports</h1>
@@ -52,16 +74,33 @@ const Reports: React.FC = () => {
                         <select value={reportType} onChange={e => setReportType(e.target.value)} className="mt-1 block w-full p-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                             <option value="stock_balance">Stock Balance by Category</option>
                             <option value="item_movement">Monthly Item Movement</option>
+                            <option value="stock_quantity_category">Stock Quantity by Category</option>
                         </select>
                     </div>
-                    <div>
-                         <label className="block text-sm font-medium text-gray-700">Category</label>
-                        <select name="category" value={filters.category} onChange={handleFilterChange} className="mt-1 block w-full p-2 border border-gray-300 bg-white rounded-md shadow-sm">
-                            <option value="">All</option>
-                            {Object.entries(ItemCategoryLabels).map(([key, label]) => (
-                                <option key={key} value={key}>{label}</option>
-                            ))}
-                        </select>
+                     <div>
+                        {reportType === 'stock_balance' && (
+                            <>
+                                <label className="block text-sm font-medium text-gray-700">Category</label>
+                                <select name="category" value={filters.category} onChange={handleFilterChange} className="mt-1 block w-full p-2 border border-gray-300 bg-white rounded-md shadow-sm">
+                                    <option value="">All</option>
+                                    {Object.entries(ItemCategoryLabels).map(([key, label]) => (
+                                        <option key={key} value={key}>{label}</option>
+                                    ))}
+                                </select>
+                            </>
+                        )}
+                         {reportType === 'stock_quantity_category' && (
+                            <div className="flex space-x-2">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Date From</label>
+                                    <input type="date" name="dateFrom" value={filters.dateFrom} onChange={handleFilterChange} className="mt-1 block w-full p-2 border border-gray-300 rounded-md" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Date To</label>
+                                    <input type="date" name="dateTo" value={filters.dateTo} onChange={handleFilterChange} className="mt-1 block w-full p-2 border border-gray-300 rounded-md" />
+                                </div>
+                            </div>
+                        )}
                     </div>
                     <div className="flex justify-end items-end space-x-2">
                         <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"><i className="fas fa-file-excel mr-2"></i>Export Excel</button>
@@ -110,6 +149,25 @@ const Reports: React.FC = () => {
                                 <Bar dataKey="stockOut" fill="#8884d8" name="Stock Out" />
                             </BarChart>
                         </ResponsiveContainer>
+                    </div>
+                )}
+                 {reportType === 'stock_quantity_category' && (
+                    <div>
+                        <h2 className="text-xl font-semibold mb-4">Stock Quantity by Category</h2>
+                        {stockQuantityByCategoryData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height={400}>
+                                <BarChart data={stockQuantityByCategoryData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="name" />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Legend />
+                                    <Bar dataKey="Total Quantity" fill="#8884d8" />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <p className="text-center text-gray-500 py-10">No data available for the selected filters.</p>
+                        )}
                     </div>
                 )}
             </div>
