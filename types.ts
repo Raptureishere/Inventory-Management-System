@@ -20,8 +20,6 @@ export const ItemCategoryKeysByLabel: { [key: string]: ItemCategory } =
         return acc;
     }, {} as { [key: string]: ItemCategory });
 
-export const DEPARTMENTS = ['Ward A', 'Laboratory', 'Pharmacy', 'ICU', 'Pediatrics'];
-
 export interface Item {
   id: number;
   itemName: string;
@@ -86,5 +84,5 @@ export interface User {
   id: number;
   username: string;
   role: 'admin' | 'subordinate';
-  password?: string; // Should be handled by backend, not stored on client
+  password?: string; // For mock authentication only
 }
