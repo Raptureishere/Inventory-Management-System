@@ -4,6 +4,27 @@ import { DEPARTMENTS } from '../constants';
 import { requisitionStorage, itemStorage } from '../services/storageService';
 import { Requisition, RequisitionStatus, User, RequestedItem, Item } from '../types';
 
+const StyledInput: React.FC<React.InputHTMLAttributes<HTMLInputElement>> = (props) => (
+    <input {...props} className={`block w-full px-3 py-2 border border-slate-300 rounded-lg placeholder-slate-400 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm ${props.className}`} />
+);
+
+const StyledSelect: React.FC<React.SelectHTMLAttributes<HTMLSelectElement>> = (props) => (
+    <select {...props} className={`block w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm ${props.className}`} />
+);
+
+const PrimaryButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ children, ...props }) => (
+    <button {...props} className={`px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:bg-slate-400 disabled:cursor-not-allowed transition-all duration-200 ${props.className}`}>
+        {children}
+    </button>
+);
+
+const SecondaryButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ children, ...props }) => (
+    <button {...props} className={`px-4 py-2.5 rounded-lg text-sm font-medium text-slate-700 bg-slate-200 hover:bg-slate-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-200 ${props.className}`}>
+        {children}
+    </button>
+);
+
+
 const CreateRequisitionModal: React.FC<{
     isOpen: boolean;
     onClose: () => void;
@@ -62,37 +83,39 @@ const CreateRequisitionModal: React.FC<{
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg">
-                <h2 className="text-2xl font-bold mb-4">Create New Requisition</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4">
+            <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-lg">
+                <h2 className="text-2xl font-bold mb-6 text-slate-800">Create New Requisition</h2>
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
-                        <label className="block text-gray-700">Department</label>
-                        <select value={departmentName} onChange={e => setDepartmentName(e.target.value)} className="w-full p-2 border rounded">
+                        <label className="block text-sm font-medium text-slate-600 mb-1">Department</label>
+                        <StyledSelect value={departmentName} onChange={e => setDepartmentName(e.target.value)}>
                             {DEPARTMENTS.map(dept => <option key={dept} value={dept}>{dept}</option>)}
-                        </select>
+                        </StyledSelect>
                     </div>
                     
                     <div className="mb-4">
-                        <label className="block text-gray-700 mb-2">Requested Items</label>
-                        {requestedItems.map((item, index) => (
-                            <div key={index} className="flex items-center space-x-2 mb-2">
-                                <select value={item.itemId || ''} onChange={e => handleItemChange(index, parseInt(e.target.value))} className="w-1/2 p-2 border rounded">
-                                    <option value="" disabled>Select an item</option>
-                                    {availableItems.map(stockItem => <option key={stockItem.id} value={stockItem.id}>{stockItem.itemName}</option>)}
-                                </select>
-                                <input type="number" value={item.quantity || 1} onChange={e => handleQuantityChange(index, parseInt(e.target.value))} min="1" className="w-1/4 p-2 border rounded" />
-                                <button type="button" onClick={() => handleRemoveItem(index)} className="text-red-500 hover:text-red-700">
-                                    <i className="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        ))}
-                         <button type="button" onClick={handleAddItem} className="text-sm text-blue-600 hover:text-blue-800">+ Add Item</button>
+                        <label className="block text-sm font-medium text-slate-600 mb-2">Requested Items</label>
+                        <div className="space-y-2">
+                            {requestedItems.map((item, index) => (
+                                <div key={index} className="flex items-center space-x-2">
+                                    <StyledSelect value={item.itemId || ''} onChange={e => handleItemChange(index, parseInt(e.target.value))} className="flex-1">
+                                        <option value="" disabled>Select an item</option>
+                                        {availableItems.map(stockItem => <option key={stockItem.id} value={stockItem.id}>{stockItem.itemName}</option>)}
+                                    </StyledSelect>
+                                    <StyledInput type="number" value={item.quantity || 1} onChange={e => handleQuantityChange(index, parseInt(e.target.value))} min="1" className="w-24" />
+                                    <button type="button" onClick={() => handleRemoveItem(index)} className="text-slate-400 hover:text-red-500 p-2">
+                                        <i className="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                         <button type="button" onClick={handleAddItem} className="text-sm font-medium text-sky-600 hover:text-sky-800 mt-2">+ Add Another Item</button>
                     </div>
 
-                    <div className="flex justify-end space-x-2 mt-6">
-                        <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Cancel</button>
-                        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Submit Request</button>
+                    <div className="flex justify-end space-x-3 mt-6">
+                        <SecondaryButton type="button" onClick={onClose}>Cancel</SecondaryButton>
+                        <PrimaryButton type="submit">Submit Request</PrimaryButton>
                     </div>
                 </form>
             </div>
@@ -164,37 +187,39 @@ const EditRequisitionModal: React.FC<{
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-lg">
-                <h2 className="text-2xl font-bold mb-4">Edit Requisition (ID: {formData.id})</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4">
+            <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-lg">
+                <h2 className="text-2xl font-bold mb-6 text-slate-800">Edit Requisition (ID: {formData.id})</h2>
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
-                        <label className="block text-gray-700">Department</label>
-                        <select value={formData.departmentName} onChange={e => handleDepartmentChange(e.target.value)} className="w-full p-2 border rounded">
+                        <label className="block text-sm font-medium text-slate-600 mb-1">Department</label>
+                        <StyledSelect value={formData.departmentName} onChange={e => handleDepartmentChange(e.target.value)}>
                             {DEPARTMENTS.map(dept => <option key={dept} value={dept}>{dept}</option>)}
-                        </select>
+                        </StyledSelect>
                     </div>
                     
                     <div className="mb-4">
-                        <label className="block text-gray-700 mb-2">Requested Items</label>
-                        {formData.requestedItems.map((item, index) => (
-                            <div key={index} className="flex items-center space-x-2 mb-2">
-                                <select value={item.itemId || ''} onChange={e => handleItemChange(index, parseInt(e.target.value))} className="w-1/2 p-2 border rounded">
-                                    <option value="" disabled>Select an item</option>
-                                    {availableItems.map(stockItem => <option key={stockItem.id} value={stockItem.id}>{stockItem.itemName}</option>)}
-                                </select>
-                                <input type="number" value={item.quantity || 1} onChange={e => handleQuantityChange(index, parseInt(e.target.value))} min="1" className="w-1/4 p-2 border rounded" />
-                                <button type="button" onClick={() => handleRemoveItem(index)} className="text-red-500 hover:text-red-700">
-                                    <i className="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        ))}
-                         <button type="button" onClick={handleAddItem} className="text-sm text-blue-600 hover:text-blue-800">+ Add Item</button>
+                        <label className="block text-sm font-medium text-slate-600 mb-2">Requested Items</label>
+                        <div className="space-y-2">
+                            {formData.requestedItems.map((item, index) => (
+                                <div key={index} className="flex items-center space-x-2">
+                                    <StyledSelect value={item.itemId || ''} onChange={e => handleItemChange(index, parseInt(e.target.value))} className="flex-1">
+                                        <option value="" disabled>Select an item</option>
+                                        {availableItems.map(stockItem => <option key={stockItem.id} value={stockItem.id}>{stockItem.itemName}</option>)}
+                                    </StyledSelect>
+                                    <StyledInput type="number" value={item.quantity || 1} onChange={e => handleQuantityChange(index, parseInt(e.target.value))} min="1" className="w-24" />
+                                    <button type="button" onClick={() => handleRemoveItem(index)} className="text-slate-400 hover:text-red-500 p-2">
+                                        <i className="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                         <button type="button" onClick={handleAddItem} className="text-sm font-medium text-sky-600 hover:text-sky-800 mt-2">+ Add Another Item</button>
                     </div>
 
-                    <div className="flex justify-end space-x-2 mt-6">
-                        <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Cancel</button>
-                        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save Changes</button>
+                    <div className="flex justify-end space-x-3 mt-6">
+                        <SecondaryButton type="button" onClick={onClose}>Cancel</SecondaryButton>
+                        <PrimaryButton type="submit">Save Changes</PrimaryButton>
                     </div>
                 </form>
             </div>
@@ -279,7 +304,7 @@ const RequisitionBook: React.FC<RequisitionBookProps> = ({ user }) => {
     };
     
     return (
-        <div>
+        <div className="space-y-6">
             {user && (
                 <CreateRequisitionModal 
                     isOpen={isCreateModalOpen}
@@ -296,105 +321,101 @@ const RequisitionBook: React.FC<RequisitionBookProps> = ({ user }) => {
                 requisition={editingRequisition}
                 availableItems={availableItems}
             />
-            <h1 className="text-3xl font-bold text-gray-800 mb-6">Requisition Book</h1>
+            <h1 className="text-3xl font-bold text-slate-800">Requisition Book</h1>
 
-            <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="bg-white p-6 rounded-xl shadow-sm">
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-semibold">All Requisitions</h2>
-                    <div className="flex space-x-4 items-center">
-                         {user && (user.role === 'admin' || user.role === 'subordinate') && (
-                            <button onClick={() => setIsCreateModalOpen(true)} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-                                <i className="fas fa-plus mr-2"></i>Create Requisition
-                            </button>
-                        )}
-                        <select
+                    <h2 className="text-xl font-semibold text-slate-800">All Requisitions</h2>
+                    <div className="flex space-x-2 items-center">
+                         <StyledSelect
                             value={filterDept}
                             onChange={e => setFilterDept(e.target.value)}
-                            className="p-2 border rounded"
                         >
                             <option value="">All Departments</option>
                             {DEPARTMENTS.map(dept => <option key={dept} value={dept}>{dept}</option>)}
-                        </select>
-                        <select
+                        </StyledSelect>
+                        <StyledSelect
                             value={filterStatus}
                             onChange={e => setFilterStatus(e.target.value as RequisitionStatus | '')}
-                            className="p-2 border rounded"
                         >
                             <option value="">All Statuses</option>
                             {Object.values(RequisitionStatus).map(status => (
                                 <option key={status} value={status}>{status}</option>
                             ))}
-                        </select>
+                        </StyledSelect>
+                        {user && (user.role === 'admin' || user.role === 'subordinate') && (
+                            <button onClick={() => setIsCreateModalOpen(true)} className="px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-all duration-200 flex items-center whitespace-nowrap">
+                                <i className="fas fa-plus mr-2"></i>Create Requisition
+                            </button>
+                        )}
                     </div>
                 </div>
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left text-gray-500">
-                        <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                    <table className="w-full text-sm text-left text-slate-500">
+                        <thead className="text-xs text-slate-700 uppercase bg-slate-50">
                             <tr>
-                                <th className="px-6 py-3">Req. ID</th>
+                                <th className="px-6 py-3 rounded-l-lg">Req. ID</th>
                                 <th className="px-6 py-3">Department</th>
                                 <th className="px-6 py-3">Date Requested</th>
                                 <th className="px-6 py-3">Items</th>
                                 <th className="px-6 py-3">Status</th>
-                                <th className="px-6 py-3">Actions</th>
+                                <th className="px-6 py-3 rounded-r-lg text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filteredRequisitions.map(req => (
-                                <tr key={req.id} className="bg-white border-b hover:bg-gray-50">
-                                    <td className="px-6 py-4">{req.id}</td>
-                                    <td className="px-6 py-4 font-medium text-gray-900">{req.departmentName}</td>
+                                <tr key={req.id} className="bg-white border-b border-slate-200 hover:bg-slate-50">
+                                    <td className="px-6 py-4 font-mono">{req.id}</td>
+                                    <td className="px-6 py-4 font-medium text-slate-900">{req.departmentName}</td>
                                     <td className="px-6 py-4">{new Date(req.dateRequested).toLocaleString()}</td>
                                     <td className="px-6 py-4">
-                                        <ul className="list-disc list-inside">
+                                        <ul className="space-y-1">
                                             {req.requestedItems.map(item => (
-                                                <li key={item.itemId}>{item.itemName} (Qty: {item.quantity})</li>
+                                                <li key={item.itemId}>{item.itemName} <span className="text-xs text-slate-400">(Qty: {item.quantity})</span></li>
                                             ))}
                                         </ul>
                                     </td>
                                     <td className="px-6 py-4">
-                                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                            req.status === RequisitionStatus.PENDING ? 'bg-yellow-200 text-yellow-800' :
-                                            req.status === RequisitionStatus.FORWARDED ? 'bg-blue-200 text-blue-800' :
-                                            req.status === RequisitionStatus.ISSUED ? 'bg-green-200 text-green-800' :
-                                            req.status === RequisitionStatus.CANCELLED ? 'bg-gray-200 text-gray-800' : ''
+                                         <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${
+                                            req.status === RequisitionStatus.PENDING ? 'bg-amber-100 text-amber-800' :
+                                            req.status === RequisitionStatus.FORWARDED ? 'bg-sky-100 text-sky-800' :
+                                            req.status === RequisitionStatus.ISSUED ? 'bg-emerald-100 text-emerald-800' :
+                                            req.status === RequisitionStatus.CANCELLED ? 'bg-slate-100 text-slate-800' : ''
                                           }`}>{req.status}</span>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <div className="flex items-center space-x-2">
+                                        <div className="flex items-center justify-center space-x-2">
                                             {user?.role === 'admin' && (
                                                 <>
                                                     {req.status === RequisitionStatus.PENDING && (
                                                         <>
                                                             <button 
                                                                 onClick={() => handleEditClick(req)}
-                                                                className="text-blue-600 hover:text-blue-800"
+                                                                className="text-slate-500 hover:text-sky-600 p-2"
                                                                 title="Edit Requisition"
                                                             >
                                                                 <i className="fas fa-edit"></i>
                                                             </button>
                                                             <button 
                                                                 onClick={() => handleForward(req.id)}
-                                                                className="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600"
+                                                                className="bg-sky-500 text-white px-3 py-1 rounded text-xs hover:bg-sky-600"
                                                             >
                                                                 Forward
                                                             </button>
                                                         </>
                                                     )}
                                                     {req.status === RequisitionStatus.FORWARDED && (
-                                                        <>
-                                                            <button 
-                                                                onClick={() => navigate(`/store-issuing-voucher/${req.id}`)}
-                                                                className="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600"
-                                                            >
-                                                                Process
-                                                            </button>
-                                                        </>
+                                                        <button 
+                                                            onClick={() => navigate(`/store-issuing-voucher/${req.id}`)}
+                                                            className="bg-emerald-500 text-white px-3 py-1 rounded text-xs hover:bg-emerald-600"
+                                                        >
+                                                            Process
+                                                        </button>
                                                     )}
                                                     {(req.status === RequisitionStatus.PENDING || req.status === RequisitionStatus.FORWARDED) && (
                                                         <button
                                                             onClick={() => handleCancel(req.id)}
-                                                            className="bg-gray-500 text-white px-3 py-1 rounded text-xs hover:bg-gray-600"
+                                                            className="bg-slate-500 text-white px-3 py-1 rounded text-xs hover:bg-slate-600"
                                                             title="Cancel Requisition"
                                                         >
                                                             Cancel
@@ -402,13 +423,14 @@ const RequisitionBook: React.FC<RequisitionBookProps> = ({ user }) => {
                                                     )}
                                                     <button 
                                                         onClick={() => handleDelete(req.id)} 
-                                                        className="text-red-600 hover:text-red-800 px-2"
+                                                        className="text-slate-500 hover:text-red-600 p-2"
                                                         title="Delete Requisition"
                                                     >
                                                         <i className="fas fa-trash"></i>
                                                     </button>
                                                 </>
                                             )}
+                                             {user?.role !== 'admin' && <span className="text-xs text-slate-400">Admin only</span>}
                                         </div>
                                     </td>
                                 </tr>

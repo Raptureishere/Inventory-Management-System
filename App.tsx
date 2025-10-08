@@ -33,33 +33,35 @@ const App: React.FC = () => {
         <Route path="/login" element={user ? <Navigate to="/" /> : <LoginPage onLogin={handleLogin} />} />
         <Route path="*" element={
           user ? (
-            <div className="flex h-screen bg-gray-100">
+            <div className="flex h-screen bg-slate-100">
               <Sidebar onLogout={handleLogout} user={user} />
-              <main className="flex-1 p-6 overflow-y-auto">
-                <Routes>
-                  {/* Common Routes */}
-                  <Route path="/add-items" element={<AddItems user={user} />} />
-                  <Route path="/requisition-book" element={<RequisitionBook user={user} />} />
+              <main className="flex-1 overflow-y-auto">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                  <Routes>
+                    {/* Common Routes */}
+                    <Route path="/add-items" element={<AddItems user={user} />} />
+                    <Route path="/requisition-book" element={<RequisitionBook user={user} />} />
 
-                  {/* Admin-only Routes */}
-                  {user.role === 'admin' && (
-                    <>
-                      <Route path="/" element={<Dashboard />} />
-                      <Route path="/store-issuing-voucher/:id" element={<StoreIssuingVoucher />} />
-                      <Route path="/issued-items-record" element={<IssuedItemsRecord />} />
-                      <Route path="/reports" element={<Reports />} />
-                      <Route path="/user-management" element={<UserManagement />} />
-                    </>
-                  )}
+                    {/* Admin-only Routes */}
+                    {user.role === 'admin' && (
+                      <>
+                        <Route path="/" element={<Dashboard />} />
+                        <Route path="/store-issuing-voucher/:id" element={<StoreIssuingVoucher />} />
+                        <Route path="/issued-items-record" element={<IssuedItemsRecord />} />
+                        <Route path="/reports" element={<Reports />} />
+                        <Route path="/user-management" element={<UserManagement />} />
+                      </>
+                    )}
 
-                  {/* Subordinate Default Redirect */}
-                  {user.role === 'subordinate' && (
-                     <Route path="/" element={<Navigate to="/requisition-book" />} />
-                  )}
+                    {/* Subordinate Default Redirect */}
+                    {user.role === 'subordinate' && (
+                       <Route path="/" element={<Navigate to="/requisition-book" />} />
+                    )}
 
-                  {/* Catch-all Redirect */}
-                  <Route path="*" element={<Navigate to="/" />} />
-                </Routes>
+                    {/* Catch-all Redirect */}
+                    <Route path="*" element={<Navigate to="/" />} />
+                  </Routes>
+                </div>
               </main>
             </div>
           ) : (
