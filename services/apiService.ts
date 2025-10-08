@@ -1,7 +1,7 @@
 import { User, Item, Requisition, IssuedItemRecord } from '../types';
 
-// In a real application, this would be an environment variable
-const API_BASE_URL = '/api';
+// The backend server is running on http://localhost:3001
+const API_BASE_URL = 'http://localhost:3001/api';
 
 /**
  * A helper function to handle fetch requests and responses.
@@ -33,13 +33,13 @@ const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
 export const apiService = {
     auth: {
         login: (username: string, password?: string): Promise<User> => {
-            return apiFetch('/login', {
+            return apiFetch('/auth/login', {
                 method: 'POST',
                 body: JSON.stringify({ username, password }),
             });
         },
         logout: (): Promise<void> => {
-            return apiFetch('/logout', { method: 'POST' });
+            return apiFetch('/auth/logout', { method: 'POST' });
         },
     },
     users: {
