@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { DEPARTMENTS } from '../types';
-import { apiService } from '../services/apiService';
+import React, { useState, useMemo, useRef } from 'react';
+import { DEPARTMENTS } from '../constants';
+import { issuedRecordStorage } from '../services/storageService';
 import { IssuedItemRecord, IssuedItemStatus } from '../types';
 
 const IssuedRecordDetailsModal: React.FC<{
@@ -123,30 +123,10 @@ const IssuedRecordDetailsModal: React.FC<{
 
 
 const IssuedItemsRecord: React.FC = () => {
-    const [records, setRecords] = useState<IssuedItemRecord[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
+    const [records, setRecords] = useState<IssuedItemRecord[]>(() => issuedRecordStorage.get());
     const [filterDept, setFilterDept] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedRecord, setSelectedRecord] = useState<IssuedItemRecord | null>(null);
-
-    useEffect(() => {
-        const fetchRecords = async () => {
-            try {
-                setIsLoading(true);
-                setError(null);
-                const data = await apiService.issuedRecords.getAll();
-                setRecords(data);
-            } catch (err) {
-                setError('Failed to fetch issued item records.');
-                console.error(err);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchRecords();
-    }, []);
 
     const filteredRecords = useMemo(() => {
         return records
@@ -154,13 +134,12 @@ const IssuedItemsRecord: React.FC = () => {
             .sort((a,b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime());
     }, [records, filterDept]);
 
-    const handleMarkProvided = async (recordId: number) => {
-        // This functionality would now be a backend API call
-        // For example: await apiService.issuedRecords.updateStatus(recordId, IssuedItemStatus.FULLY_PROVIDED);
+    const handleMarkProvided = (recordId: number) => {
         const updatedRecords = records.map(rec => 
             rec.id === recordId ? { ...rec, status: IssuedItemStatus.FULLY_PROVIDED } : rec
         );
         setRecords(updatedRecords);
+        issuedRecordStorage.save(updatedRecords);
     };
 
     const handleViewDetails = (record: IssuedItemRecord) => {
@@ -194,62 +173,58 @@ const IssuedItemsRecord: React.FC = () => {
                         {DEPARTMENTS.map(dept => <option key={dept} value={dept}>{dept}</option>)}
                     </select>
                 </div>
-                 {isLoading && <p className="text-center py-4">Loading records...</p>}
-                 {error && <p className="text-center py-4 text-red-500">{error}</p>}
-                 {!isLoading && !error && (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left text-gray-500">
-                            <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                                <tr>
-                                    <th className="px-6 py-3">Voucher ID</th>
-                                    <th className="px-6 py-3">Department</th>
-                                    <th className="px-6 py-3">Issued Items</th>
-                                    <th className="px-6 py-3">Issue Date</th>
-                                    <th className="px-6 py-3">Status</th>
-                                    <th className="px-6 py-3">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredRecords.map(record => (
-                                    <tr key={record.id} className="bg-white border-b hover:bg-gray-50">
-                                        <td className="px-6 py-4">{record.voucherId}</td>
-                                        <td className="px-6 py-4 font-medium text-gray-900">{record.departmentName}</td>
-                                        <td className="px-6 py-4">
-                                            <ul className="list-disc list-inside">
-                                                {record.issuedItems.map(item => (
-                                                    <li key={item.itemId}>{item.itemName} (Issued: {item.issuedQty})</li>
-                                                ))}
-                                            </ul>
-                                        </td>
-                                        <td className="px-6 py-4">{record.issueDate}</td>
-                                        <td className="px-6 py-4">
-                                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                                record.status === IssuedItemStatus.PENDING ? 'bg-yellow-200 text-yellow-800' : 'bg-green-200 text-green-800'
-                                            }`}>{record.status}</span>
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
+                 <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left text-gray-500">
+                        <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                            <tr>
+                                <th className="px-6 py-3">Voucher ID</th>
+                                <th className="px-6 py-3">Department</th>
+                                <th className="px-6 py-3">Issued Items</th>
+                                <th className="px-6 py-3">Issue Date</th>
+                                <th className="px-6 py-3">Status</th>
+                                <th className="px-6 py-3">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredRecords.map(record => (
+                                <tr key={record.id} className="bg-white border-b hover:bg-gray-50">
+                                    <td className="px-6 py-4">{record.voucherId}</td>
+                                    <td className="px-6 py-4 font-medium text-gray-900">{record.departmentName}</td>
+                                    <td className="px-6 py-4">
+                                        <ul className="list-disc list-inside">
+                                            {record.issuedItems.map(item => (
+                                                <li key={item.itemId}>{item.itemName} (Issued: {item.issuedQty})</li>
+                                            ))}
+                                        </ul>
+                                    </td>
+                                    <td className="px-6 py-4">{record.issueDate}</td>
+                                    <td className="px-6 py-4">
+                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                            record.status === IssuedItemStatus.PENDING ? 'bg-yellow-200 text-yellow-800' : 'bg-green-200 text-green-800'
+                                        }`}>{record.status}</span>
+                                    </td>
+                                    <td className="px-6 py-4 text-center">
+                                         <button 
+                                            onClick={() => handleViewDetails(record)}
+                                            className="text-blue-600 hover:text-blue-800 mr-3"
+                                            title="View Details"
+                                        >
+                                            <i className="fas fa-eye"></i>
+                                        </button>
+                                        {record.status === IssuedItemStatus.PENDING && (
                                             <button 
-                                                onClick={() => handleViewDetails(record)}
-                                                className="text-blue-600 hover:text-blue-800 mr-3"
-                                                title="View Details"
+                                                onClick={() => handleMarkProvided(record.id)}
+                                                className="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600"
                                             >
-                                                <i className="fas fa-eye"></i>
+                                                Mark as Provided
                                             </button>
-                                            {record.status === IssuedItemStatus.PENDING && (
-                                                <button 
-                                                    onClick={() => handleMarkProvided(record.id)}
-                                                    className="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600"
-                                                >
-                                                    Mark as Provided
-                                                </button>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                 )}
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     );

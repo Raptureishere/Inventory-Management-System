@@ -1,4 +1,5 @@
-import React, { useState, useCallback, useEffect } from 'react';
+
+import React, { useState, useCallback } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './components/LoginPage';
 import Dashboard from './components/Dashboard';
@@ -10,38 +11,23 @@ import Reports from './components/Reports';
 import Sidebar from './components/Sidebar';
 import UserManagement from './components/UserManagement';
 import { User } from './types';
-import { apiService } from './services/apiService';
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Check for an existing session on app load
-  useEffect(() => {
-    const checkSession = async () => {
-      const storedUser = sessionStorage.getItem('hims_user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-      setIsLoading(false);
-    };
-    checkSession();
-  }, []);
+  const [user, setUser] = useState<User | null>(() => {
+    const storedUser = localStorage.getItem('hims_user');
+    return storedUser ? JSON.parse(storedUser) : null;
+  });
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const handleLogin = useCallback((loggedInUser: User) => {
-    sessionStorage.setItem('hims_user', JSON.stringify(loggedInUser));
+    localStorage.setItem('hims_user', JSON.stringify(loggedInUser));
     setUser(loggedInUser);
   }, []);
 
-  const handleLogout = useCallback(async () => {
-    await apiService.auth.logout();
-    sessionStorage.removeItem('hims_user');
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('hims_user');
     setUser(null);
   }, []);
-  
-  if (isLoading) {
-    return <div className="flex h-screen items-center justify-center">Loading...</div>;
-  }
 
   return (
     <HashRouter>
@@ -50,7 +36,12 @@ const App: React.FC = () => {
         <Route path="*" element={
           user ? (
             <div className="flex h-screen bg-slate-100">
-              <Sidebar onLogout={handleLogout} user={user} />
+              <Sidebar 
+                onLogout={handleLogout} 
+                user={user} 
+                isCollapsed={isSidebarCollapsed}
+                onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              />
               <main className="flex-1 overflow-y-auto">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                   <Routes>

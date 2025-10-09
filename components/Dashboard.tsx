@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { apiService } from '../services/apiService';
+import { itemStorage, requisitionStorage, issuedRecordStorage } from '../services/storageService';
 import { Item, ItemCategory, ItemCategoryLabels, Requisition, IssuedItemRecord } from '../types';
 
 const COLORS = ['#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
@@ -158,12 +158,16 @@ const TopIssuedItemsChart: React.FC<{ items: Item[], issuedRecords: IssuedItemRe
             .slice(0, 5);
     }, [items, issuedRecords]);
     
-    // Fix: Replaced `payload` prop with `content` prop for the Legend component to avoid TypeScript errors.
+    // Fix: The `payload` prop on `Legend` is not supported by the current type definitions.
+    // A custom legend renderer function is used instead with the `content` prop.
     const renderCustomLegend = () => (
-        <ul className="list-none p-0 m-0 text-sm text-slate-700">
+        <ul className="text-sm text-slate-600 space-y-1" style={{ listStyle: 'none' }}>
             {data.map((entry, index) => (
-                <li key={`item-${index}`} className="flex items-center mb-1">
-                    <span className="inline-block w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: COLORS[index % COLORS.length] }}></span>
+                <li key={`item-${index}`} className="flex items-center">
+                    <span
+                        className="w-2.5 h-2.5 rounded-full mr-2 inline-block"
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                    />
                     <span>{entry.name}</span>
                 </li>
             ))}
@@ -206,44 +210,20 @@ const Dashboard: React.FC = () => {
     const [items, setItems] = useState<Item[]>([]);
     const [requisitions, setRequisitions] = useState<Requisition[]>([]);
     const [issuedRecords, setIssuedRecords] = useState<IssuedItemRecord[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-      const fetchData = async () => {
-        try {
-          setIsLoading(true);
-          setError(null);
-          const [itemsData, requisitionsData, issuedRecordsData] = await Promise.all([
-            apiService.items.getAll(),
-            apiService.requisitions.getAll(),
-            apiService.issuedRecords.getAll(),
-          ]);
-          setItems(itemsData);
-          setRequisitions(requisitionsData);
-          setIssuedRecords(issuedRecordsData);
-        } catch (err) {
-          setError('Failed to load dashboard data. Please try refreshing the page.');
-          console.error(err);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-
-      fetchData();
+      setItems(itemStorage.get());
+      setRequisitions(requisitionStorage.get());
+      setIssuedRecords(issuedRecordStorage.get());
     }, []);
 
-    const totalItems = useMemo(() => items.reduce((sum, item) => sum + item.quantity, 0), [items]);
-    const lowStockItems = useMemo(() => items.filter(item => item.quantity < 10), [items]);
-    const pendingRequisitionsCount = useMemo(() => requisitions.filter(r => r.status === 'Pending').length, [requisitions]);
-    const recentRequisitions = useMemo(() => [...requisitions].sort((a, b) => new Date(b.dateRequested).getTime() - new Date(a.dateRequested).getTime()).slice(0, 5), [requisitions]);
+    const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+    const lowStockItems = items.filter(item => item.quantity < 10);
+    const pendingRequisitionsCount = requisitions.filter(r => r.status === 'Pending').length;
+    const recentRequisitions = [...requisitions].sort((a, b) => new Date(b.dateRequested).getTime() - new Date(a.dateRequested).getTime()).slice(0, 5);
     
-    if (isLoading) {
-      return <div className="text-center py-10">Loading Dashboard Data...</div>;
-    }
-
-    if (error) {
-       return <div className="text-center py-10 text-red-500">{error}</div>;
+    if (items.length === 0 && requisitions.length === 0) {
+      return <div>Loading Dashboard Data...</div>
     }
 
     return (

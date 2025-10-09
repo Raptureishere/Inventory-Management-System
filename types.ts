@@ -1,3 +1,4 @@
+
 export enum ItemCategory {
   STATIONERY = 'SL',
   SANITARY = 'SM',
@@ -19,8 +20,6 @@ export const ItemCategoryKeysByLabel: { [key: string]: ItemCategory } =
         acc[label] = key as ItemCategory;
         return acc;
     }, {} as { [key: string]: ItemCategory });
-
-export const DEPARTMENTS = ['Ward A', 'Laboratory', 'Pharmacy', 'ICU', 'Pediatrics'];
 
 export interface Item {
   id: number;
@@ -86,5 +85,5 @@ export interface User {
   id: number;
   username: string;
   role: 'admin' | 'subordinate';
-  password?: string; // Should be handled by backend, not stored on client
+  password?: string; // For mock authentication only
 }
