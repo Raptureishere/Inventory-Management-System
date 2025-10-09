@@ -158,11 +158,21 @@ const TopIssuedItemsChart: React.FC<{ items: Item[], issuedRecords: IssuedItemRe
             .slice(0, 5);
     }, [items, issuedRecords]);
     
-    const legendPayload = data.map((entry, index) => ({
-        value: entry.name,
-        type: 'circle',
-        color: COLORS[index % COLORS.length]
-    }));
+    // Fix: The `payload` prop on `Legend` is not supported by the current type definitions.
+    // A custom legend renderer function is used instead with the `content` prop.
+    const renderCustomLegend = () => (
+        <ul className="text-sm text-slate-600 space-y-1" style={{ listStyle: 'none' }}>
+            {data.map((entry, index) => (
+                <li key={`item-${index}`} className="flex items-center">
+                    <span
+                        className="w-2.5 h-2.5 rounded-full mr-2 inline-block"
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                    />
+                    <span>{entry.name}</span>
+                </li>
+            ))}
+        </ul>
+    );
 
     if (data.length === 0) {
         return (
@@ -183,7 +193,7 @@ const TopIssuedItemsChart: React.FC<{ items: Item[], issuedRecords: IssuedItemRe
                     <XAxis type="number" />
                     <YAxis type="category" dataKey="name" hide={true} />
                     <Tooltip cursor={{ fill: 'rgba(240, 240, 240, 0.5)' }} contentStyle={{ background: 'white', borderRadius: '0.75rem', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}/>
-                    <Legend payload={legendPayload} layout="vertical" verticalAlign="middle" align="right" />
+                    <Legend content={renderCustomLegend} layout="vertical" verticalAlign="middle" align="right" />
                     <Bar dataKey="quantity" name="Quantity Issued" barSize={30} radius={[0, 10, 10, 0]}>
                        {data.map((entry, index) => (
                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './components/LoginPage';
@@ -16,6 +17,7 @@ const App: React.FC = () => {
     const storedUser = localStorage.getItem('hims_user');
     return storedUser ? JSON.parse(storedUser) : null;
   });
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const handleLogin = useCallback((loggedInUser: User) => {
     localStorage.setItem('hims_user', JSON.stringify(loggedInUser));
@@ -34,7 +36,12 @@ const App: React.FC = () => {
         <Route path="*" element={
           user ? (
             <div className="flex h-screen bg-slate-100">
-              <Sidebar onLogout={handleLogout} user={user} />
+              <Sidebar 
+                onLogout={handleLogout} 
+                user={user} 
+                isCollapsed={isSidebarCollapsed}
+                onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              />
               <main className="flex-1 overflow-y-auto">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                   <Routes>
