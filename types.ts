@@ -10,8 +10,8 @@ export enum ItemCategory {
 export const ItemCategoryLabels: { [key in ItemCategory]: string } = {
   [ItemCategory.STATIONERY]: 'Stationery',
   [ItemCategory.SANITARY]: 'Sanitary',
-  [ItemCategory.CONSUMABLES]: 'Consumables',
-  [ItemCategory.LABORATORY]: 'Laboratory',
+  [ItemCategory.CONSUMABLES]: 'Consumables and Disposables',
+  [ItemCategory.LABORATORY]: 'Laboratories',
   [ItemCategory.DETERGENTS]: 'Detergents',
 };
 
@@ -86,4 +86,22 @@ export interface User {
   username: string;
   role: 'admin' | 'subordinate';
   password?: string; // For mock authentication only
+}
+
+export interface PurchaseOrderItem {
+  itemId: number;
+  itemName: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface PurchaseOrder {
+  id: number;
+  poNumber: string;
+  supplierName: string;
+  orderDate: string;
+  expectedDeliveryDate: string;
+  receivedDate?: string; // It's received when this is set
+  items: PurchaseOrderItem[];
+  status: 'Pending' | 'Received' | 'Cancelled';
 }

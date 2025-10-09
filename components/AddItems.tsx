@@ -194,15 +194,21 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
 
             if (existingItemIndex > -1) {
                 const existingItem = updatedItems[existingItemIndex];
-                existingItem.quantity += quantity;
-                existingItem.supplier = row['Supplier']?.toString() || existingItem.supplier;
+                let newDateReceived = existingItem.dateReceived;
                 if(row['Date Received']) {
                     const dateReceived = new Date(row['Date Received']);
                     if (!isNaN(dateReceived.getTime())) {
-                       existingItem.dateReceived = dateReceived.toISOString().split('T')[0];
+                       newDateReceived = dateReceived.toISOString().split('T')[0];
                     }
                 }
-                existingItem.unit = row['Unit']?.toString() || existingItem.unit;
+                const updatedExistingItem = {
+                    ...existingItem,
+                    quantity: existingItem.quantity + quantity,
+                    supplier: row['Supplier']?.toString() || existingItem.supplier,
+                    dateReceived: newDateReceived,
+                    unit: row['Unit']?.toString() || existingItem.unit,
+                };
+                updatedItems[existingItemIndex] = updatedExistingItem;
                 updatedItemsCount++;
             } else {
                 const categoryLabel = row['Category']?.toString().trim();

@@ -1,5 +1,6 @@
 
-import { Item, ItemCategory, Requisition, RequisitionStatus, IssuedItemRecord, IssuedItemStatus, User } from './types';
+
+import { Item, ItemCategory, Requisition, RequisitionStatus, IssuedItemRecord, IssuedItemStatus, User, PurchaseOrder } from './types';
 
 export const MOCK_USERS: User[] = [
   { id: 1, username: 'admin', password: 'admin123', role: 'admin' },
@@ -58,4 +59,44 @@ export const MOCK_ISSUED_RECORDS: IssuedItemRecord[] = [
             { itemId: 7, itemName: 'Surgical Masks', requestedQty: 50, issuedQty: 50, balance: 450 }
         ]
     }
+];
+
+export const MOCK_PURCHASE_ORDERS: PurchaseOrder[] = [
+  {
+    id: 1,
+    poNumber: 'PO-2023-001',
+    supplierName: 'Office Supplies Inc.',
+    orderDate: '2023-09-15',
+    expectedDeliveryDate: '2023-09-30',
+    receivedDate: '2023-10-01',
+    status: 'Received',
+    items: [
+      { itemId: 1, itemName: 'A4 Paper Ream', quantity: 50, unitPrice: 5.00 },
+      { itemId: 6, itemName: 'Ballpoint Pens', quantity: 5, unitPrice: 10.00 },
+    ],
+  },
+  {
+    id: 2,
+    poNumber: 'PO-2023-002',
+    supplierName: 'MediCare',
+    orderDate: '2023-09-20',
+    expectedDeliveryDate: '2023-10-05',
+    receivedDate: '2023-10-07',
+    status: 'Received',
+    items: [
+      { itemId: 3, itemName: 'Disposable Gloves', quantity: 8, unitPrice: 15.00 },
+      { itemId: 7, itemName: 'Surgical Masks', quantity: 500, unitPrice: 20.00 },
+    ],
+  },
+    {
+    id: 3,
+    poNumber: 'PO-2023-003',
+    supplierName: 'LabEquip',
+    orderDate: '2023-10-10',
+    expectedDeliveryDate: '2023-10-25',
+    status: 'Pending',
+    items: [
+      { itemId: 4, itemName: 'Microscope Slides', quantity: 100, unitPrice: 8.00 },
+    ],
+  }
 ];
