@@ -1,15 +1,18 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { itemStorage, issuedRecordStorage } from '../services/storageService';
-import { Item, IssuedItemRecord, ItemCategoryLabels } from '../types';
+import { itemStorage, issuedRecordStorage, purchaseOrderStorage } from '../services/storageService';
+import { Item, IssuedItemRecord, ItemCategoryLabels, PurchaseOrder } from '../types';
 
 const Reports: React.FC = () => {
     const [items, setItems] = useState<Item[]>([]);
     const [issuedRecords, setIssuedRecords] = useState<IssuedItemRecord[]>([]);
+    const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
     
     useEffect(() => {
         setItems(itemStorage.get());
         setIssuedRecords(issuedRecordStorage.get());
+        setPurchaseOrders(purchaseOrderStorage.get());
     }, []);
 
     const [reportType, setReportType] = useState('stock_balance');
@@ -29,17 +32,45 @@ const Reports: React.FC = () => {
     }, [items, filters.category]);
 
     const itemMovementData = useMemo(() => {
-        // This is a simplified example. A real implementation would process records based on date filters.
-        return items.map(item => ({
-            name: item.itemName,
-            // stockIn is complex without purchase orders, so we'll mock it for the chart
-            stockIn: (item.quantity + issuedRecords.flatMap(rec => rec.issuedItems).filter(iss => iss.itemId === item.id).reduce((sum, iss) => sum + iss.issuedQty, 0)) > 20 ? Math.floor(Math.random() * 20) : 0, // Mocked data
-            stockOut: issuedRecords
-                .flatMap(rec => rec.issuedItems)
-                .filter(iss => iss.itemId === item.id)
-                .reduce((sum, iss) => sum + iss.issuedQty, 0),
-        })).filter(d => d.stockIn > 0 || d.stockOut > 0).slice(0, 10); // show top 10 with movement
-    }, [items, issuedRecords]);
+        const stockInMap = new Map<number, number>();
+        const stockOutMap = new Map<number, number>();
+
+        const filteredPOs = purchaseOrders.filter(po => {
+            if (po.status !== 'Received' || !po.receivedDate) return false;
+            if (filters.dateFrom && po.receivedDate < filters.dateFrom) return false;
+            if (filters.dateTo && po.receivedDate > filters.dateTo) return false;
+            return true;
+        });
+
+        for (const po of filteredPOs) {
+            for (const item of po.items) {
+                stockInMap.set(item.itemId, (stockInMap.get(item.itemId) || 0) + item.quantity);
+            }
+        }
+
+        const filteredIssuedRecords = issuedRecords.filter(rec => {
+            if (filters.dateFrom && rec.issueDate < filters.dateFrom) return false;
+            if (filters.dateTo && rec.issueDate > filters.dateTo) return false;
+            return true;
+        });
+
+        for (const rec of filteredIssuedRecords) {
+            for (const item of rec.issuedItems) {
+                stockOutMap.set(item.itemId, (stockOutMap.get(item.itemId) || 0) + item.issuedQty);
+            }
+        }
+
+        const allItemIds = new Set([...stockInMap.keys(), ...stockOutMap.keys()]);
+        
+        return Array.from(allItemIds).map(itemId => {
+            const item = items.find(i => i.id === itemId);
+            return {
+                name: item ? item.itemName : `Item ID ${itemId}`,
+                stockIn: stockInMap.get(itemId) || 0,
+                stockOut: stockOutMap.get(itemId) || 0,
+            };
+        }).filter(d => d.stockIn > 0 || d.stockOut > 0);
+    }, [items, issuedRecords, purchaseOrders, filters.dateFrom, filters.dateTo]);
 
     const stockQuantityByCategoryData = useMemo(() => {
         const filteredByDate = items.filter(item => {
@@ -73,7 +104,7 @@ const Reports: React.FC = () => {
                         <label className="block text-sm font-medium text-gray-700">Report Type</label>
                         <select value={reportType} onChange={e => setReportType(e.target.value)} className="mt-1 block w-full p-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                             <option value="stock_balance">Stock Balance by Category</option>
-                            <option value="item_movement">Monthly Item Movement</option>
+                            <option value="item_movement">Item Movement</option>
                             <option value="stock_quantity_category">Stock Quantity by Category</option>
                         </select>
                     </div>
@@ -89,7 +120,7 @@ const Reports: React.FC = () => {
                                 </select>
                             </>
                         )}
-                         {reportType === 'stock_quantity_category' && (
+                         {(reportType === 'item_movement' || reportType === 'stock_quantity_category') && (
                             <div className="flex space-x-2">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Date From</label>
@@ -138,17 +169,21 @@ const Reports: React.FC = () => {
                  {reportType === 'item_movement' && (
                     <div>
                         <h2 className="text-xl font-semibold mb-4">Item Movement Report</h2>
-                        <ResponsiveContainer width="100%" height={400}>
-                            <BarChart data={itemMovementData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} interval={0} />
-                                <YAxis />
-                                <Tooltip />
-                                <Legend />
-                                <Bar dataKey="stockIn" fill="#82ca9d" name="Stock In" />
-                                <Bar dataKey="stockOut" fill="#8884d8" name="Stock Out" />
-                            </BarChart>
-                        </ResponsiveContainer>
+                        {itemMovementData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height={400}>
+                                <BarChart data={itemMovementData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} interval={0} />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Legend />
+                                    <Bar dataKey="stockIn" fill="#82ca9d" name="Stock In" />
+                                    <Bar dataKey="stockOut" fill="#8884d8" name="Stock Out" />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <p className="text-center text-gray-500 py-10">No item movement data available for the selected filters.</p>
+                        )}
                     </div>
                 )}
                  {reportType === 'stock_quantity_category' && (

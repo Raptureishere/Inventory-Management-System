@@ -1,28 +1,9 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { itemStorage } from '../services/storageService';
 import { Item, ItemCategory, ItemCategoryLabels, User, ItemCategoryKeysByLabel } from '../types';
+import { StyledInput, StyledSelect, PrimaryButton, SecondaryButton } from './ui/Controls';
 
 declare const XLSX: any;
-
-const StyledInput: React.FC<React.InputHTMLAttributes<HTMLInputElement>> = (props) => (
-    <input {...props} className={`block w-full px-3 py-2 border border-slate-300 rounded-lg placeholder-slate-400 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm ${props.className}`} />
-);
-
-const StyledSelect: React.FC<React.SelectHTMLAttributes<HTMLSelectElement>> = (props) => (
-    <select {...props} className={`block w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm ${props.className}`} />
-);
-
-const PrimaryButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ children, ...props }) => (
-    <button {...props} className={`px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:bg-slate-400 disabled:cursor-not-allowed transition-all duration-200 ${props.className}`}>
-        {children}
-    </button>
-);
-
-const SecondaryButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ children, ...props }) => (
-    <button {...props} className={`px-4 py-2.5 rounded-lg text-sm font-medium text-slate-700 bg-slate-200 hover:bg-slate-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-200 ${props.className}`}>
-        {children}
-    </button>
-);
 
 
 interface EditItemModalProps {
@@ -194,15 +175,21 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
 
             if (existingItemIndex > -1) {
                 const existingItem = updatedItems[existingItemIndex];
-                existingItem.quantity += quantity;
-                existingItem.supplier = row['Supplier']?.toString() || existingItem.supplier;
+                let newDateReceived = existingItem.dateReceived;
                 if(row['Date Received']) {
                     const dateReceived = new Date(row['Date Received']);
                     if (!isNaN(dateReceived.getTime())) {
-                       existingItem.dateReceived = dateReceived.toISOString().split('T')[0];
+                       newDateReceived = dateReceived.toISOString().split('T')[0];
                     }
                 }
-                existingItem.unit = row['Unit']?.toString() || existingItem.unit;
+                const updatedExistingItem = {
+                    ...existingItem,
+                    quantity: existingItem.quantity + quantity,
+                    supplier: row['Supplier']?.toString() || existingItem.supplier,
+                    dateReceived: newDateReceived,
+                    unit: row['Unit']?.toString() || existingItem.unit,
+                };
+                updatedItems[existingItemIndex] = updatedExistingItem;
                 updatedItemsCount++;
             } else {
                 const categoryLabel = row['Category']?.toString().trim();
