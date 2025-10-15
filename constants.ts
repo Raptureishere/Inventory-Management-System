@@ -1,6 +1,6 @@
 
 
-import { Item, ItemCategory, Requisition, RequisitionStatus, IssuedItemRecord, IssuedItemStatus, User, PurchaseOrder } from './types';
+import { Item, ItemCategory, Requisition, RequisitionStatus, IssuedItemRecord, IssuedItemStatus, User, PurchaseOrder, Supplier } from './types';
 
 export const MOCK_USERS: User[] = [
   { id: 1, username: 'admin', password: 'admin123', role: 'admin' },
@@ -99,4 +99,10 @@ export const MOCK_PURCHASE_ORDERS: PurchaseOrder[] = [
       { itemId: 4, itemName: 'Microscope Slides', quantity: 100, unitPrice: 8.00 },
     ],
   }
+];
+
+export const MOCK_SUPPLIERS: Supplier[] = [
+  { id: 1, name: 'Office Supplies Inc.', contactName: 'Jane Doe', phone: '+1 555-0100', email: 'sales@office-supplies.example', address: '123 Office Park, Suite 100', notes: 'Preferred for stationery' },
+  { id: 2, name: 'MediCare', contactName: 'John Smith', phone: '+1 555-0101', email: 'orders@medicare.example', address: '88 Health Ave', notes: 'Consumables vendor' },
+  { id: 3, name: 'LabEquip', contactName: 'Mary Lee', phone: '+1 555-0102', email: 'support@labequip.example', address: '45 Science Rd', notes: 'Laboratory equipment and supplies' },
 ];

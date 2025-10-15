@@ -30,8 +30,9 @@ const NavItem: React.FC<NavItemProps> = ({ to, icon, children, isCollapsed }) =>
         className={({ isActive }) =>
           `${baseClasses} ${isActive ? activeClass : inactiveClass} ${isCollapsed ? 'justify-center' : ''}`
         }
+        aria-label={typeof children === 'string' ? (children as string) : undefined}
       >
-        <i className={`fas ${icon} w-6 h-6 text-center text-lg ${isCollapsed ? '' : 'mr-3'}`}></i>
+        <i className={`fas ${icon} w-6 h-6 text-center text-lg ${isCollapsed ? '' : 'mr-3'}`} aria-hidden="true"></i>
         {!isCollapsed && <span className="transition-opacity duration-300">{children}</span>}
       </NavLink>
       {isCollapsed && (
@@ -72,12 +73,17 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, user, isCollapsed, onToggle
       </div>
       <nav className="flex-1 p-4">
         <ul className="space-y-1">
-          {user && user.role === 'admin' && <NavItem to="/" icon="fa-tachometer-alt" isCollapsed={isCollapsed}>Dashboard</NavItem>}
+          {user && user.role === 'admin' && <>
+            <NavItem to="/" icon="fa-tachometer-alt" isCollapsed={isCollapsed}>Dashboard</NavItem>
+            <NavItem to="/home" icon="fa-house" isCollapsed={isCollapsed}>Home</NavItem>
+          </>}
           <NavItem to="/add-items" icon="fa-plus-circle" isCollapsed={isCollapsed}>Inventory Items</NavItem>
           <NavItem to="/requisition-book" icon="fa-book" isCollapsed={isCollapsed}>Requisition Book</NavItem>
           {user && user.role === 'admin' && (
             <>
               <NavItem to="/issued-items-record" icon="fa-dolly-flatbed" isCollapsed={isCollapsed}>Issued Records</NavItem>
+              <NavItem to="/purchase-orders" icon="fa-file-invoice" isCollapsed={isCollapsed}>Purchase Orders</NavItem>
+              <NavItem to="/suppliers" icon="fa-industry" isCollapsed={isCollapsed}>Suppliers</NavItem>
               <SectionHeader isCollapsed={isCollapsed} collapsedText="Sys" expandedText="System" />
               <NavItem to="/reports" icon="fa-chart-pie" isCollapsed={isCollapsed}>Reports</NavItem>
               <NavItem to="/user-management" icon="fa-users-cog" isCollapsed={isCollapsed}>User Management</NavItem>

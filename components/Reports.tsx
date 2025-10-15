@@ -3,6 +3,9 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { itemStorage, issuedRecordStorage, purchaseOrderStorage } from '../services/storageService';
 import { Item, IssuedItemRecord, ItemCategoryLabels, PurchaseOrder } from '../types';
+import { useUI } from './ui/UIContext';
+
+declare const XLSX: any;
 
 const Reports: React.FC = () => {
     const [items, setItems] = useState<Item[]>([]);
@@ -25,6 +28,40 @@ const Reports: React.FC = () => {
 
     const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
         setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    };
+
+    const { showToast } = useUI();
+
+    const exportToExcel = () => {
+        try {
+            let ws;
+            if (reportType === 'stock_balance') {
+                const data = stockBalanceData.map(item => ({
+                    'Item Code': item.itemCode,
+                    'Item Name': item.itemName,
+                    'Category': ItemCategoryLabels[item.category],
+                    'Quantity': item.quantity,
+                }));
+                ws = XLSX.utils.json_to_sheet(data);
+            } else if (reportType === 'item_movement') {
+                ws = XLSX.utils.json_to_sheet(itemMovementData);
+            } else {
+                ws = XLSX.utils.json_to_sheet(stockQuantityByCategoryData);
+            }
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Report');
+            const filename = `report_${reportType}_${new Date().toISOString().slice(0,10)}.xlsx`;
+            XLSX.writeFile(wb, filename);
+            showToast('Report exported to Excel', 'success');
+        } catch (e) {
+            console.error(e);
+            showToast('Failed to export to Excel', 'error');
+        }
+    };
+
+    const printReport = () => {
+        window.print();
+        showToast('Opening print preview…', 'info');
     };
     
     const stockBalanceData = useMemo(() => {
@@ -134,8 +171,8 @@ const Reports: React.FC = () => {
                         )}
                     </div>
                     <div className="flex justify-end items-end space-x-2">
-                        <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"><i className="fas fa-file-excel mr-2"></i>Export Excel</button>
-                        <button className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"><i className="fas fa-file-pdf mr-2"></i>Export PDF</button>
+                        <button onClick={exportToExcel} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"><i className="fas fa-file-excel mr-2"></i>Export Excel</button>
+                        <button onClick={printReport} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"><i className="fas fa-file-pdf mr-2"></i>Export PDF</button>
                     </div>
                 </div>
             </div>

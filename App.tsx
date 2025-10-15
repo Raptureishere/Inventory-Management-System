@@ -11,6 +11,10 @@ import Reports from './components/Reports';
 import Sidebar from './components/Sidebar';
 import UserManagement from './components/UserManagement';
 import { User } from './types';
+import { UIProvider } from './components/ui/UIContext';
+import Home from './components/Home';
+import SupplierManagement from './components/SupplierManagement';
+import PurchaseOrders from './components/PurchaseOrders';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(() => {
@@ -30,8 +34,9 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <HashRouter>
-      <Routes>
+    <UIProvider>
+      <HashRouter>
+        <Routes>
         <Route path="/login" element={user ? <Navigate to="/" /> : <LoginPage onLogin={handleLogin} />} />
         <Route path="*" element={
           user ? (
@@ -57,6 +62,10 @@ const App: React.FC = () => {
                         <Route path="/issued-items-record" element={<IssuedItemsRecord />} />
                         <Route path="/reports" element={<Reports />} />
                         <Route path="/user-management" element={<UserManagement />} />
+                        <Route path="/suppliers" element={<SupplierManagement />} />
+                        <Route path="/purchase-orders" element={<PurchaseOrders />} />
+                        <Route path="/home" element={<Home />} />
+                        <Route path="/" element={<Dashboard />} />
                       </>
                     )}
 
@@ -75,8 +84,9 @@ const App: React.FC = () => {
             <Navigate to="/login" />
           )
         } />
-      </Routes>
-    </HashRouter>
+        </Routes>
+      </HashRouter>
+    </UIProvider>
   );
 };
 

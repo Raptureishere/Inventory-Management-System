@@ -74,6 +74,7 @@ export interface StoreIssuingVoucher {
 
 export enum IssuedItemStatus {
     PENDING = 'Pending',
+    PARTIALLY_PROVIDED = 'Partially Provided',
     FULLY_PROVIDED = 'Fully Provided',
 }
 
@@ -104,4 +105,14 @@ export interface PurchaseOrder {
   receivedDate?: string; // It's received when this is set
   items: PurchaseOrderItem[];
   status: 'Pending' | 'Received' | 'Cancelled';
+}
+
+export interface Supplier {
+  id: number;
+  name: string;
+  contactName?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  notes?: string;
 }

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import { DEPARTMENTS } from '../constants';
 import { issuedRecordStorage } from '../services/storageService';
 import { IssuedItemRecord, IssuedItemStatus } from '../types';
+import { useUI } from './ui/UIContext';
 
 const IssuedRecordDetailsModal: React.FC<{
     isOpen: boolean;
@@ -102,7 +103,7 @@ const IssuedRecordDetailsModal: React.FC<{
                      <button onClick={onClose} className="px-5 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 mr-3">
                         Close
                     </button>
-                    <button onClick={handlePrint} className="px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <button onClick={handlePrint} className="px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" aria-label="Print Voucher">
                         <i className="fas fa-print mr-2"></i>Print
                     </button>
                 </div>
@@ -127,6 +128,7 @@ const IssuedItemsRecord: React.FC = () => {
     const [filterDept, setFilterDept] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedRecord, setSelectedRecord] = useState<IssuedItemRecord | null>(null);
+    const { showToast } = useUI();
 
     const filteredRecords = useMemo(() => {
         return records
@@ -140,6 +142,7 @@ const IssuedItemsRecord: React.FC = () => {
         );
         setRecords(updatedRecords);
         issuedRecordStorage.save(updatedRecords);
+        showToast('Voucher marked as Fully Provided', 'success');
     };
 
     const handleViewDetails = (record: IssuedItemRecord) => {
@@ -200,16 +203,19 @@ const IssuedItemsRecord: React.FC = () => {
                                     <td className="px-6 py-4">{record.issueDate}</td>
                                     <td className="px-6 py-4">
                                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                            record.status === IssuedItemStatus.PENDING ? 'bg-yellow-200 text-yellow-800' : 'bg-green-200 text-green-800'
+                                            record.status === IssuedItemStatus.PENDING ? 'bg-yellow-200 text-yellow-800' :
+                                            record.status === IssuedItemStatus.PARTIALLY_PROVIDED ? 'bg-amber-200 text-amber-900' :
+                                            'bg-green-200 text-green-800'
                                         }`}>{record.status}</span>
                                     </td>
                                     <td className="px-6 py-4 text-center">
-                                         <button 
+                                        <button 
                                             onClick={() => handleViewDetails(record)}
                                             className="text-blue-600 hover:text-blue-800 mr-3"
                                             title="View Details"
+                                            aria-label={`View details for voucher ${record.voucherId}`}
                                         >
-                                            <i className="fas fa-eye"></i>
+                                            <i className="fas fa-eye" aria-hidden="true"></i>
                                         </button>
                                         {record.status === IssuedItemStatus.PENDING && (
                                             <button 

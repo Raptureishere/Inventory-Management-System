@@ -9,6 +9,7 @@ import {
     IssuedItemRecord, 
     IssuedItemStatus 
 } from '../types';
+import { useUI } from './ui/UIContext';
 
 const StoreIssuingVoucher: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -16,6 +17,7 @@ const StoreIssuingVoucher: React.FC = () => {
     const [requisition, setRequisition] = useState<Requisition | null>(null);
     const [issuedItems, setIssuedItems] = useState<IssuedItem[]>([]);
     const [stockItems, setStockItems] = useState<Item[]>([]);
+    const { showToast, confirm } = useUI();
 
     useEffect(() => {
         const reqId = parseInt(id || '0');
@@ -56,9 +58,12 @@ const StoreIssuingVoucher: React.FC = () => {
         );
     };
     
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!requisition) return;
+
+        const ok = await confirm('Issue the selected quantities and create the voucher?', { title: 'Confirm Issue', confirmText: 'Issue Items', cancelText: 'Go Back' });
+        if (!ok) return;
 
         // 1. Update stock quantities
         const updatedStockItems = [...stockItems];
@@ -80,6 +85,8 @@ const StoreIssuingVoucher: React.FC = () => {
         // 3. Create a new issued item record
         const allIssuedRecords = issuedRecordStorage.get();
         const newRecordId = allIssuedRecords.length > 0 ? Math.max(...allIssuedRecords.map(r => r.id)) + 1 : 201;
+        const anyPartial = issuedItems.some(i => i.issuedQty > 0 && i.issuedQty < i.requestedQty);
+        const anyIssued = issuedItems.some(i => i.issuedQty > 0);
         const newRecord: IssuedItemRecord = {
             id: newRecordId,
             requisitionId: requisition.id,
@@ -87,7 +94,7 @@ const StoreIssuingVoucher: React.FC = () => {
             departmentName: requisition.departmentName,
             issueDate: new Date().toISOString().split('T')[0],
             notes: (e.currentTarget.elements.namedItem('notes') as HTMLTextAreaElement).value,
-            status: IssuedItemStatus.FULLY_PROVIDED, // Could be enhanced to check for partial issues
+            status: anyPartial ? IssuedItemStatus.PARTIALLY_PROVIDED : (anyIssued ? IssuedItemStatus.FULLY_PROVIDED : IssuedItemStatus.PENDING),
             issuedItems: issuedItems
                 .filter(item => item.issuedQty > 0)
                 .map(item => ({
@@ -97,7 +104,7 @@ const StoreIssuingVoucher: React.FC = () => {
         };
         issuedRecordStorage.save([...allIssuedRecords, newRecord]);
 
-        alert('Items issued successfully!');
+        showToast('Items issued successfully', 'success');
         navigate('/issued-items-record');
     };
 

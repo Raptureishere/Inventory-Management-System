@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { DEPARTMENTS } from '../constants';
 import { requisitionStorage, itemStorage } from '../services/storageService';
 import { Requisition, RequisitionStatus, User, RequestedItem, Item } from '../types';
+import { useUI } from './ui/UIContext';
 
 const StyledInput: React.FC<React.InputHTMLAttributes<HTMLInputElement>> = (props) => (
     <input {...props} className={`block w-full px-3 py-2 border border-slate-300 rounded-lg placeholder-slate-400 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm ${props.className}`} />
@@ -104,8 +105,8 @@ const CreateRequisitionModal: React.FC<{
                                         {availableItems.map(stockItem => <option key={stockItem.id} value={stockItem.id}>{stockItem.itemName}</option>)}
                                     </StyledSelect>
                                     <StyledInput type="number" value={item.quantity || 1} onChange={e => handleQuantityChange(index, parseInt(e.target.value))} min="1" className="w-24" />
-                                    <button type="button" onClick={() => handleRemoveItem(index)} className="text-slate-400 hover:text-red-500 p-2">
-                                        <i className="fas fa-trash"></i>
+                                    <button type="button" onClick={() => handleRemoveItem(index)} className="text-slate-400 hover:text-red-500 p-2" aria-label={`Remove item ${index + 1}`}>
+                                        <i className="fas fa-trash" aria-hidden="true"></i>
                                     </button>
                                 </div>
                             ))}
@@ -115,7 +116,7 @@ const CreateRequisitionModal: React.FC<{
 
                     <div className="flex justify-end space-x-3 mt-6">
                         <SecondaryButton type="button" onClick={onClose}>Cancel</SecondaryButton>
-                        <PrimaryButton type="submit">Submit Request</PrimaryButton>
+                        <PrimaryButton type="submit" aria-label="Submit Request">Submit Request</PrimaryButton>
                     </div>
                 </form>
             </div>
@@ -208,8 +209,8 @@ const EditRequisitionModal: React.FC<{
                                         {availableItems.map(stockItem => <option key={stockItem.id} value={stockItem.id}>{stockItem.itemName}</option>)}
                                     </StyledSelect>
                                     <StyledInput type="number" value={item.quantity || 1} onChange={e => handleQuantityChange(index, parseInt(e.target.value))} min="1" className="w-24" />
-                                    <button type="button" onClick={() => handleRemoveItem(index)} className="text-slate-400 hover:text-red-500 p-2">
-                                        <i className="fas fa-trash"></i>
+                                    <button type="button" onClick={() => handleRemoveItem(index)} className="text-slate-400 hover:text-red-500 p-2" aria-label={`Remove item ${index + 1}`}>
+                                        <i className="fas fa-trash" aria-hidden="true"></i>
                                     </button>
                                 </div>
                             ))}
@@ -240,6 +241,7 @@ const RequisitionBook: React.FC<RequisitionBookProps> = ({ user }) => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingRequisition, setEditingRequisition] = useState<Requisition | null>(null);
+    const { confirm, showToast } = useUI();
 
     const filteredRequisitions = useMemo(() => {
         return requisitions.filter(req => {
@@ -256,24 +258,27 @@ const RequisitionBook: React.FC<RequisitionBookProps> = ({ user }) => {
         setRequisitions(updatedRequisitions);
         requisitionStorage.save(updatedRequisitions);
         navigate(`/store-issuing-voucher/${requisitionId}`);
+        showToast('Request forwarded to issuing', 'success');
     };
 
-    const handleCancel = (requisitionId: number) => {
-        if (window.confirm('Are you sure you want to cancel this requisition? This action will set the status to Cancelled and it cannot be undone.')) {
+    const handleCancel = async (requisitionId: number) => {
+        const ok = await confirm('Cancel this request? You cannot undo this.', { title: 'Cancel Request', confirmText: 'Cancel Request', cancelText: 'Keep' });
+        if (!ok) return;
             const updatedRequisitions = requisitions.map(req =>
                 req.id === requisitionId ? { ...req, status: RequisitionStatus.CANCELLED } : req
             );
             setRequisitions(updatedRequisitions);
             requisitionStorage.save(updatedRequisitions);
-        }
+        showToast('Request cancelled', 'info');
     };
 
-    const handleDelete = (requisitionId: number) => {
-        if (window.confirm('Are you sure you want to permanently delete this requisition? This action cannot be undone.')) {
+    const handleDelete = async (requisitionId: number) => {
+        const ok = await confirm('Delete this request permanently? This cannot be undone.', { title: 'Delete Request', confirmText: 'Delete', cancelText: 'Cancel' });
+        if (!ok) return;
             const updatedRequisitions = requisitions.filter(req => req.id !== requisitionId);
             setRequisitions(updatedRequisitions);
             requisitionStorage.save(updatedRequisitions);
-        }
+        showToast('Request deleted', 'info');
     };
 
      const handleCreateRequisition = (newReqData: Omit<Requisition, 'id' | 'dateRequested' | 'status'>) => {
@@ -286,6 +291,7 @@ const RequisitionBook: React.FC<RequisitionBookProps> = ({ user }) => {
         const updatedRequisitions = [...requisitions, newRequisition];
         setRequisitions(updatedRequisitions);
         requisitionStorage.save(updatedRequisitions);
+        showToast('Request created', 'success');
     };
 
     const handleEditClick = (requisition: Requisition) => {

@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { itemStorage } from '../services/storageService';
 import { Item, ItemCategory, ItemCategoryLabels, User, ItemCategoryKeysByLabel } from '../types';
+import { useUI } from './ui/UIContext';
 
 declare const XLSX: any;
 
@@ -111,6 +112,9 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
     const [editingItem, setEditingItem] = useState<Item | null>(null);
     const [isImporting, setIsImporting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const { showToast, confirm } = useUI();
+    const [importPreview, setImportPreview] = useState<{ rows: any[]; summary: { newItems: number; updates: number } } | null>(null);
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     
     const [newItem, setNewItem] = useState<Omit<Item, 'id' | 'itemCode'>>({
         itemName: '',
@@ -149,6 +153,7 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
         setNewItem({
             itemName: '', category: ItemCategory.STATIONERY, quantity: 0, unit: 'pcs', dateReceived: new Date().toISOString().split('T')[0], supplier: ''
         });
+        showToast('Item added successfully', 'success');
     };
 
     const handleEditClick = (item: Item) => {
@@ -166,12 +171,13 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
         setEditingItem(null);
     };
 
-    const handleDeleteItem = (itemId: number) => {
-        if (window.confirm('Are you sure you want to delete this item?')) {
-            const updatedItems = items.filter(item => item.id !== itemId);
-            setItems(updatedItems);
-            itemStorage.save(updatedItems);
-        }
+    const handleDeleteItem = async (itemId: number) => {
+        const ok = await confirm('Delete this item? This action cannot be undone.', { title: 'Delete Item', confirmText: 'Delete', cancelText: 'Cancel' });
+        if (!ok) return;
+        const updatedItems = items.filter(item => item.id !== itemId);
+        setItems(updatedItems);
+        itemStorage.save(updatedItems);
+        showToast('Item deleted', 'info');
     };
 
     const processImportedItems = (importedData: any[]) => {
@@ -245,7 +251,7 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
         
         setItems(updatedItems);
         itemStorage.save(updatedItems);
-        alert(`Import Complete!\n- ${newItemsCount} new items were added.\n- ${updatedItemsCount} existing items were updated.`);
+        showToast(`Import complete: ${newItemsCount} new, ${updatedItemsCount} updated`, 'success', 5000);
     };
 
     const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -263,10 +269,24 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
                 const worksheet = workbook.Sheets[sheetName];
                 const json = XLSX.utils.sheet_to_json(worksheet);
                 
-                processImportedItems(json);
+                // Build preview
+                let newItemsCount = 0;
+                let updatedItemsCount = 0;
+                const rowsWithStatus = (json as any[]).map(row => {
+                    const itemName = row['Item Name']?.toString().trim();
+                    const quantity = Number(row['Quantity']);
+                    const exists = itemName && items.some(i => i.itemName.toLowerCase() === itemName.toLowerCase());
+                    const valid = !!itemName && !isNaN(quantity) && quantity > 0;
+                    if (valid) {
+                        if (exists) updatedItemsCount++; else newItemsCount++;
+                    }
+                    return { ...row, __status: !valid ? 'Invalid' : exists ? 'Update' : 'New' };
+                });
+                setImportPreview({ rows: rowsWithStatus, summary: { newItems: newItemsCount, updates: updatedItemsCount } });
+                setIsPreviewOpen(true);
             } catch (error) {
                 console.error("Error processing Excel file:", error);
-                alert("Failed to process the Excel file. Please ensure it has the correct format and column headers: 'Item Name', 'Category', 'Quantity', 'Unit', 'Date Received', 'Supplier'.");
+                showToast("Failed to process the Excel file. Please use the provided template.", 'error', 6000);
             } finally {
                 setIsImporting(false);
                 if (fileInputRef.current) {
@@ -276,10 +296,42 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
         };
         reader.onerror = () => {
              console.error("Error reading file");
-             alert("An error occurred while reading the file.");
+             showToast("An error occurred while reading the file.", 'error');
              setIsImporting(false);
         };
         reader.readAsBinaryString(file);
+    };
+
+    const handleConfirmImport = () => {
+        if (!importPreview) return;
+        const validRows = importPreview.rows.filter(r => r.__status === 'New' || r.__status === 'Update')
+            .map(({ __status, ...row }) => row);
+        processImportedItems(validRows as any[]);
+        setIsPreviewOpen(false);
+        setImportPreview(null);
+    };
+
+    const handleCancelImport = () => {
+        setIsPreviewOpen(false);
+        setImportPreview(null);
+        showToast('Import cancelled', 'info');
+    };
+
+    const handleDownloadTemplate = () => {
+        // Construct a simple CSV template for broad compatibility
+        const headers = ['Item Name','Category','Quantity','Unit','Date Received','Supplier'];
+        const sample = [
+            ['A4 Paper Ream','Stationery','50','reams','2025-01-15','Office Supplies Inc.']
+        ];
+        const csv = [headers.join(','), ...sample.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'inventory-import-template.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('Template downloaded', 'info');
     };
 
     return (
@@ -306,14 +358,23 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
                                 accept=".xlsx, .xls" 
                                 disabled={isImporting}
                             />
-                            <button 
-                                onClick={() => fileInputRef.current?.click()} 
-                                className="px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-400 flex items-center transition-all duration-200"
-                                disabled={isImporting}
-                            >
-                                <i className={`fas ${isImporting ? 'fa-spinner fa-spin' : 'fa-file-excel'} mr-2`}></i>
-                                {isImporting ? 'Importing...' : 'Import from Excel'}
-                            </button>
+                            <div className="flex items-center space-x-2">
+                                <button 
+                                    onClick={() => fileInputRef.current?.click()} 
+                                    className="px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-400 flex items-center transition-all duration-200"
+                                    disabled={isImporting}
+                                >
+                                    <i className={`fas ${isImporting ? 'fa-spinner fa-spin' : 'fa-file-excel'} mr-2`}></i>
+                                    {isImporting ? 'Importing...' : 'Import from Excel'}
+                                </button>
+                                <button 
+                                    onClick={handleDownloadTemplate}
+                                    className="px-4 py-2.5 rounded-lg text-sm font-medium text-slate-700 bg-slate-200 hover:bg-slate-300 transition-all duration-200"
+                                >
+                                    <i className="fas fa-download mr-2"></i>
+                                    Download Template
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 items-end">
@@ -406,6 +467,7 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
                                                     onClick={() => handleEditClick(item)}
                                                     className="text-slate-500 hover:text-sky-600"
                                                     title="Edit Item"
+                                                    aria-label={`Edit ${item.itemName}`}
                                                 >
                                                     <i className="fas fa-edit text-lg"></i>
                                                 </button>
@@ -413,6 +475,7 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
                                                     onClick={() => handleDeleteItem(item.id)} 
                                                     className="text-slate-500 hover:text-red-600"
                                                     title="Delete Item"
+                                                    aria-label={`Delete ${item.itemName}`}
                                                 >
                                                     <i className="fas fa-trash text-lg"></i>
                                                 </button>
@@ -427,6 +490,46 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
                     </table>
                 </div>
             </div>
+            {isPreviewOpen && importPreview && (
+                <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4">
+                    <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-3xl">
+                        <h2 className="text-2xl font-bold mb-4 text-slate-800">Import Preview</h2>
+                        <p className="text-slate-600 mb-4">New: <span className="font-semibold">{importPreview.summary.newItems}</span> | Updates: <span className="font-semibold">{importPreview.summary.updates}</span></p>
+                        <div className="overflow-x-auto max-h-96 overflow-y-auto border rounded">
+                            <table className="w-full text-sm text-left text-slate-600">
+                                <thead className="text-xs text-slate-700 uppercase bg-slate-50">
+                                    <tr>
+                                        <th className="px-4 py-2">Item Name</th>
+                                        <th className="px-4 py-2">Category</th>
+                                        <th className="px-4 py-2">Quantity</th>
+                                        <th className="px-4 py-2">Unit</th>
+                                        <th className="px-4 py-2">Date Received</th>
+                                        <th className="px-4 py-2">Supplier</th>
+                                        <th className="px-4 py-2">Result</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {importPreview.rows.map((r, idx) => (
+                                        <tr key={idx} className="border-b">
+                                            <td className="px-4 py-2">{r['Item Name'] || ''}</td>
+                                            <td className="px-4 py-2">{r['Category'] || ''}</td>
+                                            <td className="px-4 py-2">{r['Quantity'] || ''}</td>
+                                            <td className="px-4 py-2">{r['Unit'] || ''}</td>
+                                            <td className="px-4 py-2">{r['Date Received'] || ''}</td>
+                                            <td className="px-4 py-2">{r['Supplier'] || ''}</td>
+                                            <td className={`px-4 py-2 font-medium ${r.__status === 'Invalid' ? 'text-red-600' : r.__status === 'New' ? 'text-emerald-600' : 'text-sky-600'}`}>{r.__status}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="flex justify-end space-x-3 mt-4">
+                            <button onClick={handleCancelImport} className="px-4 py-2.5 rounded-lg text-sm font-medium text-slate-700 bg-slate-200 hover:bg-slate-300">Cancel</button>
+                            <button onClick={handleConfirmImport} className="px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700">Confirm Import</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

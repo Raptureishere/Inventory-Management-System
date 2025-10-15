@@ -1,7 +1,7 @@
 
 
-import { Item, Requisition, IssuedItemRecord, User, PurchaseOrder } from '../types';
-import { MOCK_ITEMS, MOCK_REQUISITIONS, MOCK_ISSUED_RECORDS, MOCK_USERS, MOCK_PURCHASE_ORDERS } from '../constants';
+import { Item, Requisition, IssuedItemRecord, User, PurchaseOrder, Supplier } from '../types';
+import { MOCK_ITEMS, MOCK_REQUISITIONS, MOCK_ISSUED_RECORDS, MOCK_USERS, MOCK_PURCHASE_ORDERS, MOCK_SUPPLIERS } from '../constants';
 
 /**
  * A generic factory function to create a storage utility for a specific data type.
@@ -43,3 +43,4 @@ export const requisitionStorage = createStorage<Requisition>('hims_requisitions'
 export const issuedRecordStorage = createStorage<IssuedItemRecord>('hims_issued_records', MOCK_ISSUED_RECORDS);
 export const userStorage = createStorage<User>('hims_users', MOCK_USERS);
 export const purchaseOrderStorage = createStorage<PurchaseOrder>('hims_purchase_orders', MOCK_PURCHASE_ORDERS);
+export const supplierStorage = createStorage<Supplier>('hims_suppliers', MOCK_SUPPLIERS);
