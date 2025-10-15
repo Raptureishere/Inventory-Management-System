@@ -4,6 +4,14 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { itemStorage, issuedRecordStorage, purchaseOrderStorage } from '../services/storageService';
 import { Item, IssuedItemRecord, ItemCategoryLabels, PurchaseOrder } from '../types';
 
+// Declare global XLSX and jsPDF types
+declare global {
+  interface Window {
+    XLSX: any;
+    jsPDF: any;
+  }
+}
+
 const Reports: React.FC = () => {
     const [items, setItems] = useState<Item[]>([]);
     const [issuedRecords, setIssuedRecords] = useState<IssuedItemRecord[]>([]);
@@ -94,6 +102,149 @@ const Reports: React.FC = () => {
         }));
     }, [items, filters.dateFrom, filters.dateTo]);
 
+    const getCurrentReportData = () => {
+        switch (reportType) {
+            case 'stock_balance':
+                return stockBalanceData.map(item => ({
+                    'Item Code': item.itemCode,
+                    'Item Name': item.itemName,
+                    'Category': ItemCategoryLabels[item.category],
+                    'Quantity': item.quantity,
+                    'Unit': item.unit,
+                    'Supplier': item.supplier,
+                    'Date Received': item.dateReceived
+                }));
+            case 'item_movement':
+                return itemMovementData.map(item => ({
+                    'Item Name': item.name,
+                    'Stock In': item.stockIn,
+                    'Stock Out': item.stockOut,
+                    'Net Movement': item.stockIn - item.stockOut
+                }));
+            case 'stock_quantity_category':
+                return stockQuantityByCategoryData.map(item => ({
+                    'Category': item.name,
+                    'Total Quantity': item['Total Quantity']
+                }));
+            default:
+                return [];
+        }
+    };
+
+    const getReportTitle = () => {
+        switch (reportType) {
+            case 'stock_balance': return 'Stock Balance Report';
+            case 'item_movement': return 'Item Movement Report';
+            case 'stock_quantity_category': return 'Stock Quantity by Category Report';
+            default: return 'Report';
+        }
+    };
+
+    const exportToExcel = () => {
+        try {
+            if (!window.XLSX) {
+                alert('Excel export functionality is not available. Please refresh the page.');
+                return;
+            }
+
+            const data = getCurrentReportData();
+            if (data.length === 0) {
+                alert('No data available to export.');
+                return;
+            }
+
+            const ws = window.XLSX.utils.json_to_sheet(data);
+            const wb = window.XLSX.utils.book_new();
+            window.XLSX.utils.book_append_sheet(wb, ws, 'Report');
+            
+            const fileName = `${getReportTitle().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+            window.XLSX.writeFile(wb, fileName);
+        } catch (error) {
+            console.error('Error exporting to Excel:', error);
+            alert('Failed to export to Excel. Please try again.');
+        }
+    };
+
+    const exportToPDF = () => {
+        try {
+            // Load jsPDF dynamically if not available
+            if (!window.jsPDF) {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+                script.onload = () => {
+                    setTimeout(() => exportToPDF(), 100);
+                };
+                document.head.appendChild(script);
+                return;
+            }
+
+            const data = getCurrentReportData();
+            if (data.length === 0) {
+                alert('No data available to export.');
+                return;
+            }
+
+            const doc = new window.jsPDF();
+            const title = getReportTitle();
+            
+            // Add title
+            doc.setFontSize(18);
+            doc.text(title, 20, 20);
+            
+            // Add date
+            doc.setFontSize(12);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 35);
+            
+            // Add filters info if applicable
+            let yPosition = 50;
+            if (filters.category) {
+                doc.text(`Category: ${ItemCategoryLabels[filters.category as keyof typeof ItemCategoryLabels]}`, 20, yPosition);
+                yPosition += 10;
+            }
+            if (filters.dateFrom || filters.dateTo) {
+                const dateRange = `Date Range: ${filters.dateFrom || 'Start'} to ${filters.dateTo || 'End'}`;
+                doc.text(dateRange, 20, yPosition);
+                yPosition += 10;
+            }
+            
+            yPosition += 10;
+            
+            // Add table headers
+            const headers = Object.keys(data[0]);
+            const startX = 20;
+            const colWidth = (180) / headers.length; // Fit within page width
+            
+            doc.setFontSize(10);
+            headers.forEach((header, index) => {
+                doc.text(header, startX + (index * colWidth), yPosition);
+            });
+            
+            yPosition += 10;
+            
+            // Add table data
+            data.forEach((row, rowIndex) => {
+                if (yPosition > 270) { // Start new page if needed
+                    doc.addPage();
+                    yPosition = 20;
+                }
+                
+                headers.forEach((header, colIndex) => {
+                    const value = String(row[header as keyof typeof row] || '');
+                    const truncatedValue = value.length > 15 ? value.substring(0, 12) + '...' : value;
+                    doc.text(truncatedValue, startX + (colIndex * colWidth), yPosition);
+                });
+                
+                yPosition += 8;
+            });
+            
+            const fileName = `${title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+            doc.save(fileName);
+        } catch (error) {
+            console.error('Error exporting to PDF:', error);
+            alert('Failed to export to PDF. Please try again.');
+        }
+    };
+
     return (
         <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-6">Reports</h1>
@@ -134,8 +285,20 @@ const Reports: React.FC = () => {
                         )}
                     </div>
                     <div className="flex justify-end items-end space-x-2">
-                        <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"><i className="fas fa-file-excel mr-2"></i>Export Excel</button>
-                        <button className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"><i className="fas fa-file-pdf mr-2"></i>Export PDF</button>
+                        <button 
+                            onClick={exportToExcel}
+                            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                            title="Export current report data to Excel"
+                        >
+                            <i className="fas fa-file-excel mr-2"></i>Export Excel
+                        </button>
+                        <button 
+                            onClick={exportToPDF}
+                            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                            title="Export current report data to PDF"
+                        >
+                            <i className="fas fa-file-pdf mr-2"></i>Export PDF
+                        </button>
                     </div>
                 </div>
             </div>

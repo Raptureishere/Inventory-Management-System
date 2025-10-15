@@ -59,7 +59,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                         </div>
                     </div>
                     <div>
-                         <label htmlFor="password"className="text-sm font-medium text-slate-600">Password</label>
+                         <label htmlFor="password" className="text-sm font-medium text-slate-600">Password</label>
                         <div className="mt-1 relative rounded-md shadow-sm">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <i className="fas fa-lock text-slate-400"></i>
