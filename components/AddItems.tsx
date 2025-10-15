@@ -2,8 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { itemStorage } from '../services/storageService';
 import { Item, ItemCategory, ItemCategoryLabels, User, ItemCategoryKeysByLabel } from '../types';
 import { useUI } from './ui/UIContext';
-
-declare const XLSX: any;
+import { StyledInput, StyledSelect, PrimaryButton, SecondaryButton } from './ui/Controls';
 
 
 interface EditItemModalProps {
@@ -244,10 +243,10 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
         reader.onload = (event) => {
             try {
                 const data = event.target?.result;
-                const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
+                const workbook = window.XLSX.read(data, { type: 'binary', cellDates: true });
                 const sheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[sheetName];
-                const json = XLSX.utils.sheet_to_json(worksheet);
+                const json = window.XLSX.utils.sheet_to_json(worksheet);
                 
                 // Build preview
                 let newItemsCount = 0;

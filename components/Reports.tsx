@@ -32,33 +32,6 @@ const Reports: React.FC = () => {
 
     const { showToast } = useUI();
 
-    const exportToExcel = () => {
-        try {
-            let ws;
-            if (reportType === 'stock_balance') {
-                const data = stockBalanceData.map(item => ({
-                    'Item Code': item.itemCode,
-                    'Item Name': item.itemName,
-                    'Category': ItemCategoryLabels[item.category],
-                    'Quantity': item.quantity,
-                }));
-                ws = XLSX.utils.json_to_sheet(data);
-            } else if (reportType === 'item_movement') {
-                ws = XLSX.utils.json_to_sheet(itemMovementData);
-            } else {
-                ws = XLSX.utils.json_to_sheet(stockQuantityByCategoryData);
-            }
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Report');
-            const filename = `report_${reportType}_${new Date().toISOString().slice(0,10)}.xlsx`;
-            XLSX.writeFile(wb, filename);
-            showToast('Report exported to Excel', 'success');
-        } catch (e) {
-            console.error(e);
-            showToast('Failed to export to Excel', 'error');
-        }
-    };
-
     const printReport = () => {
         window.print();
         showToast('Opening print preview…', 'info');
