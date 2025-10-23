@@ -104,9 +104,9 @@ const InventoryPieChart: React.FC<{ items: Item[] }> = ({ items }) => {
     const renderCenterText = () => {
         return (
             <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-slate-700">
-                <tspan x="50%" dy="-10" className="text-2xl font-bold">{totalItems}</tspan>
-                <tspan x="50%" dy="20" className="text-sm font-medium">Total Items</tspan>
-                <tspan x="50%" dy="15" className="text-xs fill-slate-500">{largestCategory.name}: {largestCategoryPercentage}%</tspan>
+                <tspan x="50%" dy="-12" className="text-xl font-bold">{totalItems}</tspan>
+                <tspan x="50%" dy="18" className="text-xs font-medium">Total Items</tspan>
+                <tspan x="50%" dy="14" style={{ fontSize: '10px' }} className="fill-slate-500">{largestCategory.name}: {largestCategoryPercentage}%</tspan>
             </text>
         );
     };
