@@ -54,7 +54,21 @@ const EditItemModal: React.FC<EditItemModalProps> = ({ isOpen, onClose, item, on
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-slate-600 mb-1">Quantity</label>
-                        <StyledInput type="number" name="quantity" value={formData.quantity} onChange={handleChange} required min="0" />
+                        <div className="relative">
+                            <StyledInput 
+                                type="number" 
+                                name="quantity" 
+                                value={formData.quantity || ''} 
+                                onChange={handleChange} 
+                                required 
+                                min="0" 
+                                step="1"
+                                placeholder="0"
+                                className="pr-8"
+                                aria-label="Quantity"
+                            />
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">qty</span>
+                        </div>
                     </div>
                      <div>
                         <label className="block text-sm font-medium text-slate-600 mb-1">Unit</label>
@@ -371,7 +385,21 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
                         </div>
                         <div>
                              <label className="text-xs font-medium text-slate-500">Quantity</label>
-                             <StyledInput type="number" name="quantity" value={newItem.quantity} onChange={handleInputChange} placeholder="0" required min="0" />
+                             <div className="relative">
+                                <StyledInput 
+                                    type="number" 
+                                    name="quantity" 
+                                    value={newItem.quantity || ''} 
+                                    onChange={handleInputChange} 
+                                    placeholder="0" 
+                                    required 
+                                    min="0" 
+                                    step="1"
+                                    className="pr-8"
+                                    aria-label="Quantity"
+                                />
+                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">qty</span>
+                             </div>
                         </div>
                         <div>
                              <label className="text-xs font-medium text-slate-500">Unit</label>

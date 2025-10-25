@@ -25,9 +25,11 @@ const CreateRequisitionModal: React.FC<{
         setRequestedItems(newItems);
     };
 
-    const handleQuantityChange = (index: number, quantity: number) => {
+    const handleQuantityChange = (index: number, value: string) => {
         const newItems = [...requestedItems];
-        newItems[index].quantity = Math.max(1, quantity);
+        const quantity = parseInt(value) || 0;
+        // Allow empty input for better UX, but enforce minimum on submit
+        newItems[index].quantity = quantity;
         setRequestedItems(newItems);
     };
 
@@ -49,18 +51,19 @@ const CreateRequisitionModal: React.FC<{
                 quantity: item.quantity!
             }));
         
-        if (finalItems.length > 0) {
-            onSubmit({
-                departmentName,
-                requestedItems: finalItems,
-                createdBy: currentUser.id
-            });
-            onClose(); // Close and reset
-            setDepartmentName(DEPARTMENTS[0]);
-            setRequestedItems([{ itemId: undefined, quantity: 1 }]);
-        } else {
-            alert('Please add at least one valid item to the requisition.');
+        if (finalItems.length === 0) {
+            alert('Please add at least one valid item with a quantity greater than 0.');
+            return;
         }
+        
+        onSubmit({
+            departmentName,
+            requestedItems: finalItems,
+            createdBy: currentUser.id
+        });
+        onClose(); // Close and reset
+        setDepartmentName(DEPARTMENTS[0]);
+        setRequestedItems([{ itemId: undefined, quantity: 1 }]);
     };
 
     return (
@@ -84,8 +87,20 @@ const CreateRequisitionModal: React.FC<{
                                         <option value="" disabled>Select an item</option>
                                         {availableItems.map(stockItem => <option key={stockItem.id} value={stockItem.id}>{stockItem.itemName}</option>)}
                                     </StyledSelect>
-                                    <StyledInput type="number" value={item.quantity || 1} onChange={e => handleQuantityChange(index, parseInt(e.target.value))} min="1" className="w-24" />
-                                    <button type="button" onClick={() => handleRemoveItem(index)} className="text-slate-400 hover:text-red-500 p-2" aria-label={`Remove item ${index + 1}`}>
+                                    <div className="relative">
+                                        <StyledInput 
+                                            type="number" 
+                                            value={item.quantity || ''} 
+                                            onChange={e => handleQuantityChange(index, e.target.value)} 
+                                            min="1" 
+                                            step="1"
+                                            placeholder="Qty"
+                                            className="w-28 pr-8" 
+                                            aria-label="Quantity"
+                                        />
+                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">qty</span>
+                                    </div>
+                                    <button type="button" onClick={() => handleRemoveItem(index)} className="text-slate-400 hover:text-red-500 p-2 transition-colors" aria-label={`Remove item ${index + 1}`}>
                                         <i className="fas fa-trash" aria-hidden="true"></i>
                                     </button>
                                 </div>
@@ -136,10 +151,12 @@ const EditRequisitionModal: React.FC<{
         }
     };
 
-    const handleQuantityChange = (index: number, quantity: number) => {
+    const handleQuantityChange = (index: number, value: string) => {
         if (!formData) return;
         const newItems = [...formData.requestedItems];
-        newItems[index].quantity = Math.max(1, quantity);
+        const quantity = parseInt(value) || 0;
+        // Allow empty input for better UX, but enforce minimum on submit
+        newItems[index].quantity = quantity;
         setFormData({ ...formData, requestedItems: newItems });
     };
 
@@ -160,11 +177,12 @@ const EditRequisitionModal: React.FC<{
         const finalItems = formData.requestedItems
             .filter(item => item.itemId !== 0 && item.quantity > 0);
         
-        if (finalItems.length > 0) {
-            onSave({ ...formData, requestedItems: finalItems });
-        } else {
-            alert('A requisition must have at least one valid item.');
+        if (finalItems.length === 0) {
+            alert('A requisition must have at least one valid item with a quantity greater than 0.');
+            return;
         }
+        
+        onSave({ ...formData, requestedItems: finalItems });
     };
 
     return (
@@ -188,8 +206,20 @@ const EditRequisitionModal: React.FC<{
                                         <option value="" disabled>Select an item</option>
                                         {availableItems.map(stockItem => <option key={stockItem.id} value={stockItem.id}>{stockItem.itemName}</option>)}
                                     </StyledSelect>
-                                    <StyledInput type="number" value={item.quantity || 1} onChange={e => handleQuantityChange(index, parseInt(e.target.value))} min="1" className="w-24" />
-                                    <button type="button" onClick={() => handleRemoveItem(index)} className="text-slate-400 hover:text-red-500 p-2" aria-label={`Remove item ${index + 1}`}>
+                                    <div className="relative">
+                                        <StyledInput 
+                                            type="number" 
+                                            value={item.quantity || ''} 
+                                            onChange={e => handleQuantityChange(index, e.target.value)} 
+                                            min="1" 
+                                            step="1"
+                                            placeholder="Qty"
+                                            className="w-28 pr-8" 
+                                            aria-label="Quantity"
+                                        />
+                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">qty</span>
+                                    </div>
+                                    <button type="button" onClick={() => handleRemoveItem(index)} className="text-slate-400 hover:text-red-500 p-2 transition-colors" aria-label={`Remove item ${index + 1}`}>
                                         <i className="fas fa-trash" aria-hidden="true"></i>
                                     </button>
                                 </div>

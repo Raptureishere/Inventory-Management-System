@@ -12,6 +12,7 @@ import Sidebar from './components/Sidebar';
 import UserManagement from './components/UserManagement';
 import { User } from './types';
 import { UIProvider } from './components/ui/UIContext';
+import ErrorBoundary from './components/ui/ErrorBoundary';
 import Home from './components/Home';
 import SupplierManagement from './components/SupplierManagement';
 import PurchaseOrders from './components/PurchaseOrders';
@@ -34,13 +35,14 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <UIProvider>
-      <HashRouter>
+    <ErrorBoundary>
+      <UIProvider>
+        <HashRouter>
         <Routes>
         <Route path="/login" element={user ? <Navigate to="/" /> : <LoginPage onLogin={handleLogin} />} />
         <Route path="*" element={
           user ? (
-            <div className="flex h-screen bg-slate-100">
+            <div className="flex h-screen bg-blue-50">
               <Sidebar 
                 onLogout={handleLogout} 
                 user={user} 
@@ -86,6 +88,7 @@ const App: React.FC = () => {
         </Routes>
       </HashRouter>
     </UIProvider>
+    </ErrorBoundary>
   );
 };
 

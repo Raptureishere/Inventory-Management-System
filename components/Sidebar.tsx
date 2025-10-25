@@ -20,7 +20,7 @@ interface NavItemProps {
 const NavItem: React.FC<NavItemProps> = ({ to, icon, children, isCollapsed }) => {
   const baseClasses = 'flex items-center px-4 py-3 my-1 font-medium rounded-lg transition-all duration-200';
   const activeClass = 'bg-blue-600 text-white shadow-sm';
-  const inactiveClass = 'text-slate-300 hover:bg-slate-600 hover:text-white';
+  const inactiveClass = 'text-slate-300 hover:bg-blue-700 hover:text-white';
 
   return (
     <li className="relative group">
@@ -67,8 +67,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, user, isCollapsed, onToggle
             <i className="fas fa-hospital text-white text-xl"></i>
         </div>
         <div className={`overflow-hidden whitespace-nowrap transition-all duration-200 ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
-            <h1 className="text-lg font-bold text-white">M&C Hospital</h1>
-            <p className="text-xs text-slate-400">Inventory System</p>
+            <h1 className="text-lg font-bold text-white">MCH Inventory</h1>
+            <p className="text-xs text-blue-300">Mother & Child Hospital</p>
         </div>
       </div>
       <nav className="flex-1 p-4">

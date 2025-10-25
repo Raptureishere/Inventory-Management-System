@@ -2,8 +2,10 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { itemStorage, requisitionStorage, issuedRecordStorage } from '../services/storageService';
 import { Item, ItemCategory, ItemCategoryLabels, Requisition, IssuedItemRecord } from '../types';
+import LoadingSpinner from './ui/LoadingSpinner';
+import ErrorMessage from './ui/ErrorMessage';
 
-const COLORS = ['#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#0ea5e9'];
 
 const StatCard: React.FC<{ title: string; value: string | number; icon: string; color: string }> = ({ title, value, icon, color }) => (
   <div className="bg-white p-5 rounded-xl shadow-sm flex items-center space-x-4 hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer">
@@ -211,11 +213,27 @@ const Dashboard: React.FC = () => {
     const [items, setItems] = useState<Item[]>([]);
     const [requisitions, setRequisitions] = useState<Requisition[]>([]);
     const [issuedRecords, setIssuedRecords] = useState<IssuedItemRecord[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-      setItems(itemStorage.get());
-      setRequisitions(requisitionStorage.get());
-      setIssuedRecords(issuedRecordStorage.get());
+      const loadData = async () => {
+        try {
+          setIsLoading(true);
+          setError(null);
+          // Simulate async loading
+          await new Promise(resolve => setTimeout(resolve, 300));
+          setItems(itemStorage.get());
+          setRequisitions(requisitionStorage.get());
+          setIssuedRecords(issuedRecordStorage.get());
+        } catch (err) {
+          setError('Failed to load dashboard data. Please try again.');
+          console.error('Dashboard load error:', err);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      loadData();
     }, []);
 
     const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -223,18 +241,31 @@ const Dashboard: React.FC = () => {
     const pendingRequisitionsCount = requisitions.filter(r => r.status === 'Pending').length;
     const recentRequisitions = [...requisitions].sort((a, b) => new Date(b.dateRequested).getTime() - new Date(a.dateRequested).getTime()).slice(0, 5);
     
-    if (items.length === 0 && requisitions.length === 0) {
-      return <div>Loading Dashboard Data...</div>
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <LoadingSpinner size="lg" message="Loading dashboard data..." />
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="space-y-6">
+          <h1 className="text-3xl font-bold text-slate-800">Dashboard</h1>
+          <ErrorMessage message={error} onRetry={() => window.location.reload()} />
+        </div>
+      );
     }
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold text-slate-800 hover:text-sky-600 transition-colors duration-300 cursor-default">Dashboard</h1>
+            <h1 className="text-3xl font-bold text-blue-800 hover:text-blue-600 transition-colors duration-300 cursor-default">Dashboard</h1>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard title="Total Items in Stock" value={totalItems} icon="fa-boxes" color="bg-sky-500" />
+                <StatCard title="Total Items in Stock" value={totalItems} icon="fa-boxes" color="bg-blue-500" />
                 <StatCard title="Item Categories" value={Object.keys(ItemCategory).length} icon="fa-tags" color="bg-emerald-500" />
-                <StatCard title="Pending Requisitions" value={pendingRequisitionsCount} icon="fa-file-alt" color="bg-amber-500" />
-                <StatCard title="Low Stock Alerts" value={lowStockItems.length} icon="fa-exclamation-triangle" color="bg-red-500" />
+                <StatCard title="Pending Requisitions" value={pendingRequisitionsCount} icon="fa-file-alt" color="bg-sky-500" />
+                <StatCard title="Low Stock Alerts" value={lowStockItems.length} icon="fa-exclamation-triangle" color="bg-rose-500" />
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                 <div className="lg:col-span-3">
