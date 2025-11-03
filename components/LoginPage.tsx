@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User } from '../types';
-import { userStorage } from '../services/storageService';
+import api from '../services/api';
 
 interface LoginPageProps {
   onLogin: (user: User) => void;
@@ -18,38 +18,46 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     setError('');
 
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Call backend API
+      const response = await api.login(username, password);
       
-      const foundUser = userStorage.get().find(
-        (u) => u.username === username && u.password === password
-      );
-
-      if (foundUser) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { password, ...userToLogin } = foundUser;
-        onLogin(userToLogin as User);
+      if (response.token && response.user) {
+        // Store user data in localStorage
+        localStorage.setItem('user', JSON.stringify(response.user));
+        
+        // Call onLogin with user data
+        onLogin(response.user as User);
       } else {
-        setError('Invalid username or password');
+        setError('Invalid response from server');
       }
-    } catch (err) {
-      setError('An error occurred during login. Please try again.');
+    } catch (err: any) {
+      setError(err.message || 'Invalid username or password');
+      console.error('Login error:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-sky-50 p-4">
-        <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 to-emerald-50 p-4 relative overflow-hidden">
+        {/* Background Image with Opacity */}
+        <div 
+            className="absolute inset-0 bg-cover bg-center opacity-10"
+            style={{
+                backgroundImage: "url('https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=2053&auto=format&fit=crop')",
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+            }}
+        ></div>
+        
+        {/* Content Overlay */}
+        <div className="relative z-10 w-full max-w-md">
             <div className="text-center mb-8">
                 <div className="inline-block bg-white p-4 rounded-full shadow-lg mb-4">
-                    <svg className="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
+                    <i className="fas fa-clinic-medical text-5xl text-teal-600"></i>
                 </div>
-                <h1 className="text-3xl font-bold text-blue-800">MCH Inventory System</h1>
-                <p className="text-blue-600">Mother & Child Hospital</p>
+                <h2 className="text-3xl font-bold text-gray-900">Clinic Inventory</h2>
+                <p className="text-gray-600 mt-2">Healthcare Management System</p>
             </div>
             <div className="bg-white rounded-xl shadow-lg p-8">
                 <form className="space-y-6" onSubmit={handleSubmit}>
@@ -65,7 +73,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                                 type="text"
                                 autoComplete="username"
                                 required
-                                className="block w-full pl-10 pr-3 py-2.5 border border-blue-200 rounded-lg placeholder-slate-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                className="block w-full pl-10 pr-3 py-2.5 border border-teal-200 rounded-lg placeholder-slate-400 focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm"
                                 placeholder="admin or sub"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
@@ -84,7 +92,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                                 type="password"
                                 autoComplete="current-password"
                                 required
-                                className="block w-full pl-10 pr-3 py-2.5 border border-blue-200 rounded-lg placeholder-slate-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                className="block w-full pl-10 pr-3 py-2.5 border border-teal-200 rounded-lg placeholder-slate-400 focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm"
                                 placeholder="admin123 or sub123"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
@@ -98,7 +106,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                         <button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                         {isLoading ? (
                           <>

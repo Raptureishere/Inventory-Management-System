@@ -15,8 +15,7 @@ const SupplierManagement: React.FC = () => {
         const s = search.toLowerCase();
         return suppliers.filter(v =>
             v.name.toLowerCase().includes(s) ||
-            (v.contactName || '').toLowerCase().includes(s) ||
-            (v.email || '').toLowerCase().includes(s)
+            (v.contactName || '').toLowerCase().includes(s)
         );
     }, [search, suppliers]);
 
@@ -77,15 +76,9 @@ const SupplierManagement: React.FC = () => {
                             <label className="text-xs font-medium text-slate-500">Contact Name</label>
                             <input className="block w-full px-3 py-2 border border-slate-300 rounded-lg" value={form.contactName} onChange={e => setForm({ ...form, contactName: e.target.value })} />
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                                <label className="text-xs font-medium text-slate-500">Phone</label>
-                                <input className="block w-full px-3 py-2 border border-slate-300 rounded-lg" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
-                            </div>
-                            <div>
-                                <label className="text-xs font-medium text-slate-500">Email</label>
-                                <input type="email" className="block w-full px-3 py-2 border border-slate-300 rounded-lg" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-                            </div>
+                        <div>
+                            <label className="text-xs font-medium text-slate-500">Phone</label>
+                            <input className="block w-full px-3 py-2 border border-slate-300 rounded-lg" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
                         </div>
                         <div>
                             <label className="text-xs font-medium text-slate-500">Address</label>
@@ -108,7 +101,7 @@ const SupplierManagement: React.FC = () => {
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <i className="fas fa-search text-slate-400"></i>
                             </div>
-                            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, contact, or email" className="pl-10 block w-72 px-3 py-2 border border-slate-300 rounded-lg" />
+                            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or contact" className="pl-10 block w-72 px-3 py-2 border border-slate-300 rounded-lg" />
                         </div>
                     </div>
                     <div className="overflow-x-auto">
@@ -118,7 +111,6 @@ const SupplierManagement: React.FC = () => {
                                     <th className="px-6 py-3">Name</th>
                                     <th className="px-6 py-3">Contact</th>
                                     <th className="px-6 py-3">Phone</th>
-                                    <th className="px-6 py-3">Email</th>
                                     <th className="px-6 py-3">Actions</th>
                                 </tr>
                             </thead>
@@ -128,7 +120,6 @@ const SupplierManagement: React.FC = () => {
                                         <td className="px-6 py-4 font-medium text-slate-900">{s.name}</td>
                                         <td className="px-6 py-4">{s.contactName || '-'}</td>
                                         <td className="px-6 py-4">{s.phone || '-'}</td>
-                                        <td className="px-6 py-4">{s.email || '-'}</td>
                                         <td className="px-6 py-4 text-center">
                                             <div className="flex items-center justify-center space-x-3">
                                                 <button onClick={() => startEdit(s)} className="text-slate-500 hover:text-sky-600" title="Edit Supplier" aria-label={`Edit ${s.name}`}>
@@ -143,7 +134,7 @@ const SupplierManagement: React.FC = () => {
                                 ))}
                                 {filtered.length === 0 && (
                                     <tr>
-                                        <td colSpan={5} className="text-center py-10 text-slate-500">No suppliers found.</td>
+                                        <td colSpan={4} className="text-center py-10 text-slate-500">No suppliers found.</td>
                                     </tr>
                                 )}
                             </tbody>

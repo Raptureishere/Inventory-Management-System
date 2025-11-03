@@ -42,7 +42,7 @@ const App: React.FC = () => {
         <Route path="/login" element={user ? <Navigate to="/" /> : <LoginPage onLogin={handleLogin} />} />
         <Route path="*" element={
           user ? (
-            <div className="flex h-screen bg-blue-50">
+            <div className="flex h-screen bg-teal-50">
               <Sidebar 
                 onLogout={handleLogout} 
                 user={user} 
@@ -50,7 +50,7 @@ const App: React.FC = () => {
                 onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
               />
               <main className="flex-1 overflow-y-auto">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-8">
                   <Routes>
                     {/* Common Routes */}
                     <Route path="/add-items" element={<AddItems user={user} />} />

@@ -260,7 +260,7 @@ const Dashboard: React.FC = () => {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold text-blue-800 hover:text-blue-600 transition-colors duration-300 cursor-default">Dashboard</h1>
+            <h1 className="text-3xl font-bold text-teal-800 hover:text-teal-600 transition-colors duration-300 cursor-default">Dashboard</h1>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard title="Total Items in Stock" value={totalItems} icon="fa-boxes" color="bg-blue-500" />
                 <StatCard title="Item Categories" value={Object.keys(ItemCategory).length} icon="fa-tags" color="bg-emerald-500" />

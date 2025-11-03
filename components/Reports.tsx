@@ -6,6 +6,11 @@ import { Item, IssuedItemRecord, ItemCategoryLabels, PurchaseOrder } from '../ty
 import { useUI } from './ui/UIContext';
 
 declare const XLSX: any;
+declare global {
+    interface Window {
+        jspdf?: any;
+    }
+}
 
 const Reports: React.FC = () => {
     const [items, setItems] = useState<Item[]>([]);
@@ -169,12 +174,20 @@ const Reports: React.FC = () => {
 
     const exportToPDF = () => {
         try {
-            // Load jsPDF dynamically if not available
-            if (!window.jsPDF) {
+            // Check if jsPDF is available - it can be at window.jspdf.jsPDF or window.jsPDF
+            let jsPDF = null;
+            if (window.jspdf && window.jspdf.jsPDF) {
+                jsPDF = window.jspdf.jsPDF;
+            } else if ((window as any).jsPDF) {
+                jsPDF = (window as any).jsPDF;
+            }
+            
+            if (!jsPDF) {
+                showToast('PDF library is loading. Please try again in a moment.', 'info');
                 const script = document.createElement('script');
                 script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
                 script.onload = () => {
-                    setTimeout(() => exportToPDF(), 100);
+                    showToast('PDF library loaded. You can now export.', 'success');
                 };
                 document.head.appendChild(script);
                 return;
@@ -182,11 +195,11 @@ const Reports: React.FC = () => {
 
             const data = getCurrentReportData();
             if (data.length === 0) {
-                alert('No data available to export.');
+                showToast('No data available to export.', 'info');
                 return;
             }
 
-            const doc = new window.jsPDF();
+            const doc = new jsPDF();
             const title = getReportTitle();
             
             // Add title
@@ -241,9 +254,10 @@ const Reports: React.FC = () => {
             
             const fileName = `${title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
             doc.save(fileName);
+            showToast('PDF exported successfully!', 'success');
         } catch (error) {
             console.error('Error exporting to PDF:', error);
-            alert('Failed to export to PDF. Please try again.');
+            showToast('Failed to export to PDF. Please check console for details.', 'error');
         }
     };
 
@@ -288,7 +302,7 @@ const Reports: React.FC = () => {
                     </div>
                     <div className="flex justify-end items-end space-x-2">
                         <button onClick={exportToExcel} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"><i className="fas fa-file-excel mr-2"></i>Export Excel</button>
-                        <button onClick={printReport} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"><i className="fas fa-file-pdf mr-2"></i>Export PDF</button>
+                        <button onClick={exportToPDF} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"><i className="fas fa-file-pdf mr-2"></i>Export PDF</button>
                     </div>
                 </div>
             </div>

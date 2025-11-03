@@ -10,14 +10,14 @@ export const MOCK_USERS: User[] = [
 export const DEPARTMENTS = ['Ward A', 'Laboratory', 'Pharmacy', 'ICU', 'Pediatrics'];
 
 export const MOCK_ITEMS: Item[] = [
-  { id: 1, itemName: 'A4 Paper Ream', itemCode: 'SL001', category: ItemCategory.STATIONERY, quantity: 50, unit: 'reams', dateReceived: '2023-10-01', supplier: 'Office Supplies Inc.' },
-  { id: 2, itemName: 'Hand Sanitizer 500ml', itemCode: 'SM001', category: ItemCategory.SANITARY, quantity: 120, unit: 'bottles', dateReceived: '2023-10-02', supplier: 'HealthPro' },
-  { id: 3, itemName: 'Disposable Gloves', itemCode: 'CL001', category: ItemCategory.CONSUMABLES, quantity: 8, unit: 'boxes', dateReceived: '2023-10-03', supplier: 'MediCare' },
-  { id: 4, itemName: 'Microscope Slides', itemCode: 'LG001', category: ItemCategory.LABORATORY, quantity: 200, unit: 'packs', dateReceived: '2023-10-04', supplier: 'LabEquip' },
-  { id: 5, itemName: 'Bleach 1L', itemCode: 'A2001', category: ItemCategory.DETERGENTS, quantity: 75, unit: 'bottles', dateReceived: '2023-10-05', supplier: 'CleanCo' },
-  { id: 6, itemName: 'Ballpoint Pens', itemCode: 'SL002', category: ItemCategory.STATIONERY, quantity: 5, unit: 'boxes', dateReceived: '2023-10-06', supplier: 'Office Supplies Inc.' },
-  { id: 7, itemName: 'Surgical Masks', itemCode: 'CL002', category: ItemCategory.CONSUMABLES, quantity: 500, unit: 'boxes', dateReceived: '2023-10-07', supplier: 'MediCare' },
-  { id: 8, itemName: 'Test Tubes', itemCode: 'LG002', category: ItemCategory.LABORATORY, quantity: 9, unit: 'packs', dateReceived: '2023-10-08', supplier: 'LabEquip' },
+  { id: 1, itemName: 'Surgical Scalpel Set', itemCode: 'MS001', category: ItemCategory.MEDICAL_SURGICAL, quantity: 50, unit: 'sets', dateReceived: '2023-10-01', supplier: 'MediCare' },
+  { id: 2, itemName: 'Paracetamol 500mg', itemCode: 'PH001', category: ItemCategory.PHARMACEUTICALS, quantity: 120, unit: 'bottles', dateReceived: '2023-10-02', supplier: 'PharmaCo' },
+  { id: 3, itemName: 'Disposable Gloves', itemCode: 'PP001', category: ItemCategory.PPE, quantity: 8, unit: 'boxes', dateReceived: '2023-10-03', supplier: 'MediCare' },
+  { id: 4, itemName: 'Microscope Slides', itemCode: 'LB001', category: ItemCategory.LABORATORY, quantity: 200, unit: 'packs', dateReceived: '2023-10-04', supplier: 'LabEquip' },
+  { id: 5, itemName: 'Disinfectant Solution 1L', itemCode: 'SD001', category: ItemCategory.STERILIZATION_DISINFECTION, quantity: 75, unit: 'bottles', dateReceived: '2023-10-05', supplier: 'CleanCo' },
+  { id: 6, itemName: 'Patient Bed', itemCode: 'HE001', category: ItemCategory.HOSPITAL_EQUIPMENT, quantity: 5, unit: 'units', dateReceived: '2023-10-06', supplier: 'HospitalEquip Inc.' },
+  { id: 7, itemName: 'Surgical Masks', itemCode: 'PP002', category: ItemCategory.PPE, quantity: 500, unit: 'boxes', dateReceived: '2023-10-07', supplier: 'MediCare' },
+  { id: 8, itemName: 'Test Tubes', itemCode: 'LB002', category: ItemCategory.LABORATORY, quantity: 9, unit: 'packs', dateReceived: '2023-10-08', supplier: 'LabEquip' },
 ];
 
 export const MOCK_REQUISITIONS: Requisition[] = [
@@ -65,14 +65,14 @@ export const MOCK_PURCHASE_ORDERS: PurchaseOrder[] = [
   {
     id: 1,
     poNumber: 'PO-2023-001',
-    supplierName: 'Office Supplies Inc.',
+    supplierName: 'MediCare',
     orderDate: '2023-09-15',
     expectedDeliveryDate: '2023-09-30',
     receivedDate: '2023-10-01',
     status: 'Received',
     items: [
-      { itemId: 1, itemName: 'A4 Paper Ream', quantity: 50, unitPrice: 5.00 },
-      { itemId: 6, itemName: 'Ballpoint Pens', quantity: 5, unitPrice: 10.00 },
+      { itemId: 1, itemName: 'Surgical Scalpel Set', quantity: 50, unitPrice: 25.00 },
+      { itemId: 6, itemName: 'Patient Bed', quantity: 5, unitPrice: 500.00 },
     ],
   },
   {
@@ -102,7 +102,9 @@ export const MOCK_PURCHASE_ORDERS: PurchaseOrder[] = [
 ];
 
 export const MOCK_SUPPLIERS: Supplier[] = [
-  { id: 1, name: 'Office Supplies Inc.', contactName: 'Jane Doe', phone: '+1 555-0100', email: 'sales@office-supplies.example', address: '123 Office Park, Suite 100', notes: 'Preferred for stationery' },
-  { id: 2, name: 'MediCare', contactName: 'John Smith', phone: '+1 555-0101', email: 'orders@medicare.example', address: '88 Health Ave', notes: 'Consumables vendor' },
+  { id: 1, name: 'MediCare', contactName: 'John Smith', phone: '+1 555-0100', email: 'orders@medicare.example', address: '88 Health Ave', notes: 'Medical and surgical supplies, PPE' },
+  { id: 2, name: 'PharmaCo', contactName: 'Jane Doe', phone: '+1 555-0101', email: 'sales@pharmaco.example', address: '123 Pharma Plaza', notes: 'Pharmaceuticals and medications' },
   { id: 3, name: 'LabEquip', contactName: 'Mary Lee', phone: '+1 555-0102', email: 'support@labequip.example', address: '45 Science Rd', notes: 'Laboratory equipment and supplies' },
+  { id: 4, name: 'CleanCo', contactName: 'Robert Brown', phone: '+1 555-0103', email: 'info@cleanco.example', address: '67 Industrial Way', notes: 'Sterilization and disinfection materials' },
+  { id: 5, name: 'HospitalEquip Inc.', contactName: 'Sarah Johnson', phone: '+1 555-0104', email: 'sales@hospitalequip.example', address: '90 Medical Drive', notes: 'Hospital equipment and furniture' },
 ];

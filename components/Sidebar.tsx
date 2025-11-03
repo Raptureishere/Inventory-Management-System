@@ -19,8 +19,8 @@ interface NavItemProps {
 
 const NavItem: React.FC<NavItemProps> = ({ to, icon, children, isCollapsed }) => {
   const baseClasses = 'flex items-center px-4 py-3 my-1 font-medium rounded-lg transition-all duration-200';
-  const activeClass = 'bg-blue-600 text-white shadow-sm';
-  const inactiveClass = 'text-slate-300 hover:bg-blue-700 hover:text-white';
+  const activeClass = 'bg-teal-600 text-white shadow-sm';
+  const inactiveClass = 'text-slate-300 hover:bg-teal-700 hover:text-white';
 
   return (
     <li className="relative group">
@@ -56,19 +56,19 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, user, isCollapsed, onToggle
     <aside className={`bg-slate-800 text-white flex flex-col h-screen shadow-xl relative transition-all duration-300 ease-in-out ${isCollapsed ? 'w-20' : 'w-64'} border-r border-slate-700`}>
         <button 
           onClick={onToggleCollapse} 
-          className="absolute top-6 -right-3 w-6 h-6 bg-slate-700 hover:bg-blue-600 rounded-full flex items-center justify-center text-white focus:outline-none shadow-md z-10 transition-colors duration-200"
+          className="absolute top-6 -right-3 w-6 h-6 bg-slate-700 hover:bg-teal-600 rounded-full flex items-center justify-center text-white focus:outline-none shadow-md z-10 transition-colors duration-200"
           aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
         <i className={`fas ${isCollapsed ? 'fa-chevron-right' : 'fa-chevron-left'} text-xs`}></i>
       </button>
 
       <div className={`p-5 border-b border-slate-700 flex items-center space-x-3 ${isCollapsed ? 'justify-center' : ''}`}>
-        <div className="bg-blue-600 p-2 rounded-lg flex-shrink-0">
-            <i className="fas fa-hospital text-white text-xl"></i>
+        <div className="bg-teal-600 p-2 rounded-lg flex-shrink-0">
+            <i className="fas fa-clinic-medical text-white text-xl"></i>
         </div>
         <div className={`overflow-hidden whitespace-nowrap transition-all duration-200 ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
-            <h1 className="text-lg font-bold text-white">MCH Inventory</h1>
-            <p className="text-xs text-blue-300">Mother & Child Hospital</p>
+            <h1 className="text-lg font-bold text-white">Clinic Inventory</h1>
+            <p className="text-xs text-teal-300">Healthcare Management</p>
         </div>
       </div>
       <nav className="flex-1 p-4">
@@ -94,7 +94,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, user, isCollapsed, onToggle
       <div className="p-4 border-t border-slate-700">
         {user && (
             <div className={`flex items-center p-3 mb-3 rounded-lg bg-slate-700 ${isCollapsed ? 'justify-center' : ''}`}>
-               <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+               <div className="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center flex-shrink-0">
                  <i className="fas fa-user text-white text-sm"></i>
                </div>
                <div className={`ml-3 overflow-hidden whitespace-nowrap transition-all duration-200 ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>

@@ -111,7 +111,7 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
     
     const [newItem, setNewItem] = useState<Omit<Item, 'id' | 'itemCode'>>({
         itemName: '',
-        category: ItemCategory.STATIONERY,
+        category: ItemCategory.MEDICAL_SURGICAL,
         quantity: 0,
         unit: 'pcs',
         dateReceived: new Date().toISOString().split('T')[0],
@@ -144,7 +144,7 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
         setItems(updatedItems);
         itemStorage.save(updatedItems);
         setNewItem({
-            itemName: '', category: ItemCategory.STATIONERY, quantity: 0, unit: 'pcs', dateReceived: new Date().toISOString().split('T')[0], supplier: ''
+            itemName: '', category: ItemCategory.MEDICAL_SURGICAL, quantity: 0, unit: 'pcs', dateReceived: new Date().toISOString().split('T')[0], supplier: ''
         });
         showToast('Item added successfully', 'success');
     };
@@ -211,10 +211,20 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
                 updatedItemsCount++;
             } else {
                 const categoryLabel = row['Category']?.toString().trim();
-                const categoryKey = ItemCategoryKeysByLabel[categoryLabel];
+                if (!categoryLabel) {
+                    console.warn('Skipping new item with missing category:', row);
+                    return;
+                }
+                
+                // Case-insensitive category lookup
+                const categoryKey = Object.entries(ItemCategoryLabels).find(
+                    ([_, label]) => label.toLowerCase() === categoryLabel.toLowerCase()
+                )?.[0] as ItemCategory | undefined;
 
                 if (!categoryKey) {
-                    console.warn(`Skipping new item with unknown category '${categoryLabel}':`, row);
+                    const validCategories = Object.values(ItemCategoryLabels).join(', ');
+                    console.warn(`Skipping new item with unknown category '${categoryLabel}'. Valid categories are: ${validCategories}`);
+                    showToast(`Invalid category: "${categoryLabel}". Check console for valid categories.`, 'error', 8000);
                     return;
                 }
 
@@ -311,12 +321,25 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
     };
 
     const handleDownloadTemplate = () => {
-        // Construct a simple CSV template for broad compatibility
+        // Construct a comprehensive CSV template with examples of all categories
         const headers = ['Item Name','Category','Quantity','Unit','Date Received','Supplier'];
-        const sample = [
-            ['A4 Paper Ream','Stationery','50','reams','2025-01-15','Office Supplies Inc.']
+        const samples = [
+            ['Surgical Scalpel Set','Medical and Surgical Supplies','50','sets','2025-01-15','MediCare'],
+            ['Paracetamol 500mg','Pharmaceuticals','100','bottles','2025-01-15','PharmaCo'],
+            ['Microscope Slides','Laboratory Supplies','200','packs','2025-01-15','LabEquip'],
+            ['X-Ray Film','Radiology and Imaging Supplies','30','boxes','2025-01-15','RadSupply'],
+            ['Patient Bed','Hospital Equipment','5','units','2025-01-15','HospitalEquip Inc.'],
+            ['Paper Towels','Non-Medical Consumables','100','rolls','2025-01-15','SupplyCo'],
+            ['Disposable Gloves','Personal Protective Equipment (PPE)','500','boxes','2025-01-15','MediCare'],
+            ['Wrench Set','Maintenance and Engineering Supplies','10','sets','2025-01-15','ToolSupply'],
+            ['Office Chair','Furniture and Fixtures','20','units','2025-01-15','FurnitureCo'],
+            ['Desktop Computer','IT and Communication Equipment','15','units','2025-01-15','TechSupply'],
+            ['Disinfectant Solution','Sterilization and Disinfection Materials','75','bottles','2025-01-15','CleanCo'],
+            ['First Aid Kit','Ambulance and Emergency Supplies','25','kits','2025-01-15','EmergencySupply'],
+            ['Bed Sheets','Linen and Ward Items','100','pieces','2025-01-15','LinenCo'],
+            ['Waste Bags','Waste Management Supplies','200','rolls','2025-01-15','WasteCo']
         ];
-        const csv = [headers.join(','), ...sample.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n');
+        const csv = [headers.join(','), ...samples.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n');
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -324,11 +347,11 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
         a.download = 'inventory-import-template.csv';
         a.click();
         URL.revokeObjectURL(url);
-        showToast('Template downloaded', 'info');
+        showToast('Template downloaded with all category examples', 'success', 4000);
     };
 
     return (
-        <div className="space-y-6">
+        <div className="p-6 space-y-6">
             <EditItemModal
                 isOpen={isEditModalOpen}
                 onClose={() => setIsEditModalOpen(false)}
@@ -516,17 +539,23 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {importPreview.rows.map((r, idx) => (
-                                        <tr key={idx} className="border-b">
-                                            <td className="px-4 py-2">{r['Item Name'] || ''}</td>
-                                            <td className="px-4 py-2">{r['Category'] || ''}</td>
-                                            <td className="px-4 py-2">{r['Quantity'] || ''}</td>
-                                            <td className="px-4 py-2">{r['Unit'] || ''}</td>
-                                            <td className="px-4 py-2">{r['Date Received'] || ''}</td>
-                                            <td className="px-4 py-2">{r['Supplier'] || ''}</td>
-                                            <td className={`px-4 py-2 font-medium ${r.__status === 'Invalid' ? 'text-red-600' : r.__status === 'New' ? 'text-emerald-600' : 'text-sky-600'}`}>{r.__status}</td>
-                                        </tr>
-                                    ))}
+                                    {importPreview.rows.map((r, idx) => {
+                                        const dateReceived = r['Date Received'];
+                                        const dateStr = dateReceived instanceof Date 
+                                            ? dateReceived.toISOString().split('T')[0] 
+                                            : (dateReceived || '');
+                                        return (
+                                            <tr key={idx} className="border-b">
+                                                <td className="px-4 py-2">{r['Item Name'] || ''}</td>
+                                                <td className="px-4 py-2">{r['Category'] || ''}</td>
+                                                <td className="px-4 py-2">{r['Quantity'] || ''}</td>
+                                                <td className="px-4 py-2">{r['Unit'] || ''}</td>
+                                                <td className="px-4 py-2">{dateStr}</td>
+                                                <td className="px-4 py-2">{r['Supplier'] || ''}</td>
+                                                <td className={`px-4 py-2 font-medium ${r.__status === 'Invalid' ? 'text-red-600' : r.__status === 'New' ? 'text-emerald-600' : 'text-sky-600'}`}>{r.__status}</td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
