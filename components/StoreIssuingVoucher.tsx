@@ -105,7 +105,7 @@ const StoreIssuingVoucher: React.FC = () => {
         issuedRecordStorage.save([...allIssuedRecords, newRecord]);
 
         showToast('Items issued successfully', 'success');
-        navigate('/issued-items-record');
+        navigate('/issued-items-record', { state: { highlightId: newRecordId } });
     };
 
     if (!requisition) {

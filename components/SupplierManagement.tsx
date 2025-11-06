@@ -7,7 +7,7 @@ import { useUI } from './ui/UIContext';
 const SupplierManagement: React.FC = () => {
     const [suppliers, setSuppliers] = useState<Supplier[]>(() => supplierStorage.get());
     const [search, setSearch] = useState('');
-    const [form, setForm] = useState<Omit<Supplier, 'id'>>({ name: '', contactName: '', phone: '', email: '', address: '', notes: '' });
+    const [form, setForm] = useState<Omit<Supplier, 'id'>>({ name: '', contactPerson: '', phone: '', email: '', address: '', notes: '' });
     const [editing, setEditing] = useState<Supplier | null>(null);
     const { showToast, confirm } = useUI();
 
@@ -15,11 +15,11 @@ const SupplierManagement: React.FC = () => {
         const s = search.toLowerCase();
         return suppliers.filter(v =>
             v.name.toLowerCase().includes(s) ||
-            (v.contactName || '').toLowerCase().includes(s)
+            (v.contactPerson || '').toLowerCase().includes(s)
         );
     }, [search, suppliers]);
 
-    const resetForm = () => setForm({ name: '', contactName: '', phone: '', email: '', address: '', notes: '' });
+    const resetForm = () => setForm({ name: '', contactPerson: '', phone: '', email: '', address: '', notes: '' });
 
     const handleAdd = (e: React.FormEvent) => {
         e.preventDefault();
@@ -38,7 +38,7 @@ const SupplierManagement: React.FC = () => {
 
     const startEdit = (s: Supplier) => {
         setEditing(s);
-        setForm({ name: s.name, contactName: s.contactName, phone: s.phone, email: s.email, address: s.address, notes: s.notes });
+        setForm({ name: s.name, contactPerson: s.contactPerson, phone: s.phone, email: s.email, address: s.address, notes: s.notes });
     };
 
     const handleUpdate = (e: React.FormEvent) => {
@@ -74,7 +74,7 @@ const SupplierManagement: React.FC = () => {
                         </div>
                         <div>
                             <label className="text-xs font-medium text-slate-500">Contact Name</label>
-                            <input className="block w-full px-3 py-2 border border-slate-300 rounded-lg" value={form.contactName} onChange={e => setForm({ ...form, contactName: e.target.value })} />
+                            <input className="block w-full px-3 py-2 border border-slate-300 rounded-lg" value={form.contactPerson} onChange={e => setForm({ ...form, contactPerson: e.target.value })} />
                         </div>
                         <div>
                             <label className="text-xs font-medium text-slate-500">Phone</label>
@@ -118,7 +118,7 @@ const SupplierManagement: React.FC = () => {
                                 {filtered.map(s => (
                                     <tr key={s.id} className="bg-white border-b hover:bg-slate-50">
                                         <td className="px-6 py-4 font-medium text-slate-900">{s.name}</td>
-                                        <td className="px-6 py-4">{s.contactName || '-'}</td>
+                                        <td className="px-6 py-4">{s.contactPerson || '-'}</td>
                                         <td className="px-6 py-4">{s.phone || '-'}</td>
                                         <td className="px-6 py-4 text-center">
                                             <div className="flex items-center justify-center space-x-3">

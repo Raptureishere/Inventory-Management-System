@@ -111,7 +111,7 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
     
     const [newItem, setNewItem] = useState<Omit<Item, 'id' | 'itemCode'>>({
         itemName: '',
-        category: ItemCategory.MEDICAL_SURGICAL,
+        category: ItemCategory.CONSUMABLES,
         quantity: 0,
         unit: 'pcs',
         dateReceived: new Date().toISOString().split('T')[0],
@@ -144,7 +144,7 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
         setItems(updatedItems);
         itemStorage.save(updatedItems);
         setNewItem({
-            itemName: '', category: ItemCategory.MEDICAL_SURGICAL, quantity: 0, unit: 'pcs', dateReceived: new Date().toISOString().split('T')[0], supplier: ''
+            itemName: '', category: ItemCategory.CONSUMABLES, quantity: 0, unit: 'pcs', dateReceived: new Date().toISOString().split('T')[0], supplier: ''
         });
         showToast('Item added successfully', 'success');
     };
@@ -321,23 +321,16 @@ const AddItems: React.FC<AddItemsProps> = ({ user }) => {
     };
 
     const handleDownloadTemplate = () => {
-        // Construct a comprehensive CSV template with examples of all categories
+        // Construct a CSV template with examples of all categories
         const headers = ['Item Name','Category','Quantity','Unit','Date Received','Supplier'];
         const samples = [
-            ['Surgical Scalpel Set','Medical and Surgical Supplies','50','sets','2025-01-15','MediCare'],
-            ['Paracetamol 500mg','Pharmaceuticals','100','bottles','2025-01-15','PharmaCo'],
-            ['Microscope Slides','Laboratory Supplies','200','packs','2025-01-15','LabEquip'],
-            ['X-Ray Film','Radiology and Imaging Supplies','30','boxes','2025-01-15','RadSupply'],
-            ['Patient Bed','Hospital Equipment','5','units','2025-01-15','HospitalEquip Inc.'],
-            ['Paper Towels','Non-Medical Consumables','100','rolls','2025-01-15','SupplyCo'],
-            ['Disposable Gloves','Personal Protective Equipment (PPE)','500','boxes','2025-01-15','MediCare'],
-            ['Wrench Set','Maintenance and Engineering Supplies','10','sets','2025-01-15','ToolSupply'],
-            ['Office Chair','Furniture and Fixtures','20','units','2025-01-15','FurnitureCo'],
-            ['Desktop Computer','IT and Communication Equipment','15','units','2025-01-15','TechSupply'],
-            ['Disinfectant Solution','Sterilization and Disinfection Materials','75','bottles','2025-01-15','CleanCo'],
-            ['First Aid Kit','Ambulance and Emergency Supplies','25','kits','2025-01-15','EmergencySupply'],
-            ['Bed Sheets','Linen and Ward Items','100','pieces','2025-01-15','LinenCo'],
-            ['Waste Bags','Waste Management Supplies','200','rolls','2025-01-15','WasteCo']
+            ['A4 Paper Ream','Stationery','10','reams','2025-01-15','OfficeSupply'],
+            ['Surgical Gloves','Surgical Items','200','boxes','2025-01-15','MediCare'],
+            ['Bleach 5L','Detergents','20','bottles','2025-01-15','CleanCo'],
+            ['Hand Soap','Sanitary','50','bottles','2025-01-15','CleanCo'],
+            ['Test Tubes','Lab Items','100','packs','2025-01-15','LabEquip'],
+            ['Batteries AA','General Items','40','packs','2025-01-15','GeneralSupply'],
+            ['Paper Towels','Consumables','30','rolls','2025-01-15','SupplyCo']
         ];
         const csv = [headers.join(','), ...samples.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n');
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });

@@ -7,17 +7,44 @@ export const MOCK_USERS: User[] = [
   { id: 2, username: 'sub', password: 'sub123', role: 'subordinate' },
 ];
 
-export const DEPARTMENTS = ['Ward A', 'Laboratory', 'Pharmacy', 'ICU', 'Pediatrics'];
+export const DEPARTMENTS = [
+  'OPD',
+  'Maternity',
+  'Emergency',
+  'Female ward',
+  'ENT',
+  'Dental',
+  'Laundry',
+  'Recovery',
+  'Theater',
+  'ANC',
+  'Scan',
+  'DCU',
+  'PNC',
+  'Dressing',
+  'Eye Unit',
+  'Administration',
+  'Accounts',
+  'Procurement',
+  'Nursing Administration',
+  'Audit',
+  'IT',
+  'Creche',
+  'Estate',
+  'Records',
+  'Nicu',
+  'Pharmacy'
+];
 
 export const MOCK_ITEMS: Item[] = [
-  { id: 1, itemName: 'Surgical Scalpel Set', itemCode: 'MS001', category: ItemCategory.MEDICAL_SURGICAL, quantity: 50, unit: 'sets', dateReceived: '2023-10-01', supplier: 'MediCare' },
-  { id: 2, itemName: 'Paracetamol 500mg', itemCode: 'PH001', category: ItemCategory.PHARMACEUTICALS, quantity: 120, unit: 'bottles', dateReceived: '2023-10-02', supplier: 'PharmaCo' },
-  { id: 3, itemName: 'Disposable Gloves', itemCode: 'PP001', category: ItemCategory.PPE, quantity: 8, unit: 'boxes', dateReceived: '2023-10-03', supplier: 'MediCare' },
-  { id: 4, itemName: 'Microscope Slides', itemCode: 'LB001', category: ItemCategory.LABORATORY, quantity: 200, unit: 'packs', dateReceived: '2023-10-04', supplier: 'LabEquip' },
-  { id: 5, itemName: 'Disinfectant Solution 1L', itemCode: 'SD001', category: ItemCategory.STERILIZATION_DISINFECTION, quantity: 75, unit: 'bottles', dateReceived: '2023-10-05', supplier: 'CleanCo' },
-  { id: 6, itemName: 'Patient Bed', itemCode: 'HE001', category: ItemCategory.HOSPITAL_EQUIPMENT, quantity: 5, unit: 'units', dateReceived: '2023-10-06', supplier: 'HospitalEquip Inc.' },
-  { id: 7, itemName: 'Surgical Masks', itemCode: 'PP002', category: ItemCategory.PPE, quantity: 500, unit: 'boxes', dateReceived: '2023-10-07', supplier: 'MediCare' },
-  { id: 8, itemName: 'Test Tubes', itemCode: 'LB002', category: ItemCategory.LABORATORY, quantity: 9, unit: 'packs', dateReceived: '2023-10-08', supplier: 'LabEquip' },
+  { id: 1, itemName: 'Surgical Scalpel Set', itemCode: 'SUR001', category: ItemCategory.SURGICAL_ITEMS, quantity: 50, unit: 'sets', dateReceived: '2023-10-01', supplier: 'MediCare' },
+  { id: 2, itemName: 'Paracetamol 500mg', itemCode: 'CON002', category: ItemCategory.CONSUMABLES, quantity: 120, unit: 'bottles', dateReceived: '2023-10-02', supplier: 'PharmaCo' },
+  { id: 3, itemName: 'Disposable Gloves', itemCode: 'SUR003', category: ItemCategory.SURGICAL_ITEMS, quantity: 8, unit: 'boxes', dateReceived: '2023-10-03', supplier: 'MediCare' },
+  { id: 4, itemName: 'Microscope Slides', itemCode: 'LAB004', category: ItemCategory.LAB_ITEMS, quantity: 200, unit: 'packs', dateReceived: '2023-10-04', supplier: 'LabEquip' },
+  { id: 5, itemName: 'Disinfectant Solution 1L', itemCode: 'DET005', category: ItemCategory.DETERGENTS, quantity: 75, unit: 'bottles', dateReceived: '2023-10-05', supplier: 'CleanCo' },
+  { id: 6, itemName: 'Patient Bed', itemCode: 'GEN006', category: ItemCategory.GENERAL_ITEMS, quantity: 5, unit: 'units', dateReceived: '2023-10-06', supplier: 'HospitalEquip Inc.' },
+  { id: 7, itemName: 'Surgical Masks', itemCode: 'SUR007', category: ItemCategory.SURGICAL_ITEMS, quantity: 500, unit: 'boxes', dateReceived: '2023-10-07', supplier: 'MediCare' },
+  { id: 8, itemName: 'Test Tubes', itemCode: 'LAB008', category: ItemCategory.LAB_ITEMS, quantity: 9, unit: 'packs', dateReceived: '2023-10-08', supplier: 'LabEquip' },
 ];
 
 export const MOCK_REQUISITIONS: Requisition[] = [
@@ -102,9 +129,9 @@ export const MOCK_PURCHASE_ORDERS: PurchaseOrder[] = [
 ];
 
 export const MOCK_SUPPLIERS: Supplier[] = [
-  { id: 1, name: 'MediCare', contactName: 'John Smith', phone: '+1 555-0100', email: 'orders@medicare.example', address: '88 Health Ave', notes: 'Medical and surgical supplies, PPE' },
-  { id: 2, name: 'PharmaCo', contactName: 'Jane Doe', phone: '+1 555-0101', email: 'sales@pharmaco.example', address: '123 Pharma Plaza', notes: 'Pharmaceuticals and medications' },
-  { id: 3, name: 'LabEquip', contactName: 'Mary Lee', phone: '+1 555-0102', email: 'support@labequip.example', address: '45 Science Rd', notes: 'Laboratory equipment and supplies' },
-  { id: 4, name: 'CleanCo', contactName: 'Robert Brown', phone: '+1 555-0103', email: 'info@cleanco.example', address: '67 Industrial Way', notes: 'Sterilization and disinfection materials' },
-  { id: 5, name: 'HospitalEquip Inc.', contactName: 'Sarah Johnson', phone: '+1 555-0104', email: 'sales@hospitalequip.example', address: '90 Medical Drive', notes: 'Hospital equipment and furniture' },
+  { id: 1, name: 'MediCare', contactPerson: 'John Smith', phone: '+1 555-0100', email: 'orders@medicare.example', address: '88 Health Ave', notes: 'Medical and surgical supplies, PPE' },
+  { id: 2, name: 'PharmaCo', contactPerson: 'Jane Doe', phone: '+1 555-0101', email: 'sales@pharmaco.example', address: '123 Pharma Plaza', notes: 'Pharmaceuticals and medications' },
+  { id: 3, name: 'LabEquip', contactPerson: 'Mary Lee', phone: '+1 555-0102', email: 'support@labequip.example', address: '45 Science Rd', notes: 'Laboratory equipment and supplies' },
+  { id: 4, name: 'CleanCo', contactPerson: 'Robert Brown', phone: '+1 555-0103', email: 'info@cleanco.example', address: '67 Industrial Way', notes: 'Sterilization and disinfection materials' },
+  { id: 5, name: 'HospitalEquip Inc.', contactPerson: 'Sarah Johnson', phone: '+1 555-0104', email: 'sales@hospitalequip.example', address: '90 Medical Drive', notes: 'Hospital equipment and furniture' },
 ];

@@ -51,7 +51,7 @@ export const api = {
 
   logout: () => {
     localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    localStorage.removeItem('hims_user');
   },
 
   // ==================== ITEMS ====================

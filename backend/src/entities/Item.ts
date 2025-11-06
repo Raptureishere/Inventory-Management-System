@@ -14,20 +14,20 @@ import { PurchaseOrderItem } from './PurchaseOrderItem';
 import { IssuingItem } from './IssuingItem';
 
 export enum ItemCategory {
-  MEDICAL_SURGICAL = 'MS',
-  PHARMACEUTICALS = 'PH',
-  LABORATORY = 'LB',
-  RADIOLOGY_IMAGING = 'RI',
-  HOSPITAL_EQUIPMENT = 'HE',
-  NON_MEDICAL_CONSUMABLES = 'NC',
-  PPE = 'PP',
-  MAINTENANCE_ENGINEERING = 'ME',
-  FURNITURE_FIXTURES = 'FF',
-  IT_COMMUNICATION = 'IC',
-  STERILIZATION_DISINFECTION = 'SD',
-  AMBULANCE_EMERGENCY = 'AE',
-  LINEN_WARD = 'LW',
-  WASTE_MANAGEMENT = 'WM'
+  CONSUMABLES = 'CON',
+  STATIONERY = 'STA',
+  LAB_ITEMS = 'LAB',
+  SURGICAL_ITEMS = 'SUR',
+  DETERGENTS = 'DET',
+  SANITARY = 'SAN',
+  GENERAL_ITEMS = 'GEN',
+  // Legacy values present in existing databases
+  MEDICAL_SURGICAL_LEGACY = 'MS',
+  PHARMACEUTICALS_LEGACY = 'PH',
+  PPE_LEGACY = 'PPE',
+  LABORATORY_LEGACY = 'LB',
+  STERILIZATION_DISINFECTION_LEGACY = 'SD',
+  HOSPITAL_EQUIPMENT_LEGACY = 'HE'
 }
 
 @Entity('items')
@@ -41,10 +41,7 @@ export class Item {
   @Column({ length: 200 })
   itemName: string;
 
-  @Column({
-    type: 'enum',
-    enum: ItemCategory
-  })
+  @Column({ type: 'varchar', length: 12 })
   category: ItemCategory;
 
   @Column({ type: 'int', default: 0 })

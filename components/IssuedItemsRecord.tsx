@@ -1,8 +1,9 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { DEPARTMENTS } from '../constants';
 import { issuedRecordStorage } from '../services/storageService';
 import { IssuedItemRecord, IssuedItemStatus } from '../types';
 import { useUI } from './ui/UIContext';
+import { useLocation } from 'react-router-dom';
 
 const IssuedRecordDetailsModal: React.FC<{
     isOpen: boolean;
@@ -129,6 +130,25 @@ const IssuedItemsRecord: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedRecord, setSelectedRecord] = useState<IssuedItemRecord | null>(null);
     const { showToast } = useUI();
+    const location = useLocation() as any;
+
+    useEffect(() => {
+        const highlightId = location?.state?.highlightId as number | undefined;
+        if (highlightId) {
+            // Refresh records to ensure latest is included
+            const latest = issuedRecordStorage.get();
+            setRecords(latest);
+            const rec = latest.find(r => r.id === highlightId) || null;
+            if (rec) {
+                setSelectedRecord(rec);
+                setIsModalOpen(true);
+                showToast('Issued voucher created', 'success');
+            }
+            // Clear state to avoid reopening on back/forward
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const filteredRecords = useMemo(() => {
         return records

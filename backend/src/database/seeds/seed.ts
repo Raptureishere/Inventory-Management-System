@@ -78,16 +78,16 @@ async function seed() {
     const suppliers = await supplierRepository.find();
     
     const itemsData = [
-      { itemCode: 'MS001', itemName: 'Surgical Scalpel Set', category: ItemCategory.MEDICAL_SURGICAL, quantity: 50, unit: 'sets', reorderLevel: 10, unitPrice: 25.00, supplierId: suppliers[0]?.id },
-      { itemCode: 'PH001', itemName: 'Paracetamol 500mg', category: ItemCategory.PHARMACEUTICALS, quantity: 120, unit: 'bottles', reorderLevel: 20, unitPrice: 8.50, supplierId: suppliers[1]?.id },
-      { itemCode: 'PP001', itemName: 'Disposable Gloves (Box of 100)', category: ItemCategory.PPE, quantity: 75, unit: 'boxes', reorderLevel: 15, unitPrice: 12.00, supplierId: suppliers[0]?.id },
-      { itemCode: 'LB001', itemName: 'Microscope Slides', category: ItemCategory.LABORATORY, quantity: 200, unit: 'packs', reorderLevel: 30, unitPrice: 5.00, supplierId: suppliers[2]?.id },
-      { itemCode: 'SD001', itemName: 'Disinfectant Solution 1L', category: ItemCategory.STERILIZATION_DISINFECTION, quantity: 100, unit: 'bottles', reorderLevel: 20, unitPrice: 15.00, supplierId: suppliers[3]?.id },
-      { itemCode: 'HE001', itemName: 'Hospital Bed (Standard)', category: ItemCategory.HOSPITAL_EQUIPMENT, quantity: 10, unit: 'units', reorderLevel: 2, unitPrice: 800.00, supplierId: suppliers[4]?.id },
-      { itemCode: 'PP002', itemName: 'Surgical Masks (Box of 50)', category: ItemCategory.PPE, quantity: 150, unit: 'boxes', reorderLevel: 30, unitPrice: 10.00, supplierId: suppliers[0]?.id },
-      { itemCode: 'LB002', itemName: 'Test Tubes (Pack of 100)', category: ItemCategory.LABORATORY, quantity: 80, unit: 'packs', reorderLevel: 15, unitPrice: 7.50, supplierId: suppliers[2]?.id },
-      { itemCode: 'MS002', itemName: 'Sterile Gauze Pads', category: ItemCategory.MEDICAL_SURGICAL, quantity: 200, unit: 'packs', reorderLevel: 40, unitPrice: 6.00, supplierId: suppliers[0]?.id },
-      { itemCode: 'PH002', itemName: 'Ibuprofen 400mg', category: ItemCategory.PHARMACEUTICALS, quantity: 90, unit: 'bottles', reorderLevel: 15, unitPrice: 10.00, supplierId: suppliers[1]?.id }
+      { itemCode: 'MS001', itemName: 'Surgical Scalpel Set', category: ItemCategory.SURGICAL_ITEMS, quantity: 50, unit: 'sets', reorderLevel: 10, unitPrice: 25.00, supplierId: suppliers[0]?.id },
+      { itemCode: 'PH001', itemName: 'Paracetamol 500mg', category: ItemCategory.CONSUMABLES, quantity: 120, unit: 'bottles', reorderLevel: 20, unitPrice: 8.50, supplierId: suppliers[1]?.id },
+      { itemCode: 'PP001', itemName: 'Disposable Gloves (Box of 100)', category: ItemCategory.SURGICAL_ITEMS, quantity: 75, unit: 'boxes', reorderLevel: 15, unitPrice: 12.00, supplierId: suppliers[0]?.id },
+      { itemCode: 'LB001', itemName: 'Microscope Slides', category: ItemCategory.LAB_ITEMS, quantity: 200, unit: 'packs', reorderLevel: 30, unitPrice: 5.00, supplierId: suppliers[2]?.id },
+      { itemCode: 'SD001', itemName: 'Disinfectant Solution 1L', category: ItemCategory.DETERGENTS, quantity: 100, unit: 'bottles', reorderLevel: 20, unitPrice: 15.00, supplierId: suppliers[3]?.id },
+      { itemCode: 'HE001', itemName: 'Hospital Bed (Standard)', category: ItemCategory.GENERAL_ITEMS, quantity: 10, unit: 'units', reorderLevel: 2, unitPrice: 800.00, supplierId: suppliers[4]?.id },
+      { itemCode: 'PP002', itemName: 'Surgical Masks (Box of 50)', category: ItemCategory.SURGICAL_ITEMS, quantity: 150, unit: 'boxes', reorderLevel: 30, unitPrice: 10.00, supplierId: suppliers[0]?.id },
+      { itemCode: 'LB002', itemName: 'Test Tubes (Pack of 100)', category: ItemCategory.LAB_ITEMS, quantity: 80, unit: 'packs', reorderLevel: 15, unitPrice: 7.50, supplierId: suppliers[2]?.id },
+      { itemCode: 'MS002', itemName: 'Sterile Gauze Pads', category: ItemCategory.SURGICAL_ITEMS, quantity: 200, unit: 'packs', reorderLevel: 40, unitPrice: 6.00, supplierId: suppliers[0]?.id },
+      { itemCode: 'PH002', itemName: 'Ibuprofen 400mg', category: ItemCategory.CONSUMABLES, quantity: 90, unit: 'bottles', reorderLevel: 15, unitPrice: 10.00, supplierId: suppliers[1]?.id }
     ];
 
     for (const itemData of itemsData) {

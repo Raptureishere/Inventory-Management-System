@@ -1,7 +1,9 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { User } from '../types';
+import { requisitionStorage } from '../services/storageService';
+import { Requisition, RequisitionStatus } from '../types';
 
 interface SidebarProps {
   onLogout: () => void;
@@ -15,9 +17,10 @@ interface NavItemProps {
     icon: string; 
     children: React.ReactNode;
     isCollapsed: boolean;
+    showAlert?: boolean;
 }
 
-const NavItem: React.FC<NavItemProps> = ({ to, icon, children, isCollapsed }) => {
+const NavItem: React.FC<NavItemProps> = ({ to, icon, children, isCollapsed, showAlert = false }) => {
   const baseClasses = 'flex items-center px-4 py-3 my-1 font-medium rounded-lg transition-all duration-200';
   const activeClass = 'bg-teal-600 text-white shadow-sm';
   const inactiveClass = 'text-slate-300 hover:bg-teal-700 hover:text-white';
@@ -32,8 +35,20 @@ const NavItem: React.FC<NavItemProps> = ({ to, icon, children, isCollapsed }) =>
         }
         aria-label={typeof children === 'string' ? (children as string) : undefined}
       >
-        <i className={`fas ${icon} w-5 h-5 text-center ${isCollapsed ? '' : 'mr-3'}`} aria-hidden="true"></i>
-        {!isCollapsed && <span>{children}</span>}
+        <div className="relative">
+          <i className={`fas ${icon} w-5 h-5 text-center ${isCollapsed ? '' : 'mr-3'}`} aria-hidden="true"></i>
+          {showAlert && (
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-800 animate-pulse" aria-label="Pending requisitions alert"></span>
+          )}
+        </div>
+        {!isCollapsed && (
+          <span className="flex items-center">
+            {children}
+            {showAlert && (
+              <span className="ml-2 w-2 h-2 bg-red-500 rounded-full animate-pulse" aria-label="Pending requisitions"></span>
+            )}
+          </span>
+        )}
       </NavLink>
       {isCollapsed && (
          <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-2 py-1 bg-slate-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-20 shadow-lg">
@@ -52,6 +67,35 @@ const SectionHeader: React.FC<{isCollapsed: boolean; collapsedText: string; expa
 
 
 const Sidebar: React.FC<SidebarProps> = ({ onLogout, user, isCollapsed, onToggleCollapse }) => {
+  const [hasPendingRequisitions, setHasPendingRequisitions] = useState(false);
+
+  useEffect(() => {
+    const checkPendingRequisitions = () => {
+      const requisitions = requisitionStorage.get();
+      const pendingCount = requisitions.filter(r => r.status === RequisitionStatus.PENDING).length;
+      setHasPendingRequisitions(pendingCount > 0);
+    };
+
+    // Check immediately
+    checkPendingRequisitions();
+
+    // Check periodically (every 5 seconds) to update if requisitions change
+    const interval = setInterval(checkPendingRequisitions, 5000);
+
+    // Also listen for storage changes (when data is updated in other tabs/components)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'hims_requisitions') {
+        checkPendingRequisitions();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
   return (
     <aside className={`bg-slate-800 text-white flex flex-col h-screen shadow-xl relative transition-all duration-300 ease-in-out ${isCollapsed ? 'w-20' : 'w-64'} border-r border-slate-700`}>
         <button 
@@ -74,7 +118,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, user, isCollapsed, onToggle
       <nav className="flex-1 p-4">
         <ul className="space-y-1">
           {user && user.role === 'admin' && <>
-            <NavItem to="/" icon="fa-tachometer-alt" isCollapsed={isCollapsed}>Dashboard</NavItem>
+            <NavItem to="/" icon="fa-tachometer-alt" isCollapsed={isCollapsed} showAlert={hasPendingRequisitions}>Dashboard</NavItem>
             <NavItem to="/home" icon="fa-house" isCollapsed={isCollapsed}>Home</NavItem>
           </>}
           <NavItem to="/add-items" icon="fa-plus-circle" isCollapsed={isCollapsed}>Inventory Items</NavItem>

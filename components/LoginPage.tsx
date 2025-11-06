@@ -23,7 +23,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       
       if (response.token && response.user) {
         // Store user data in localStorage
-        localStorage.setItem('user', JSON.stringify(response.user));
+        localStorage.setItem('hims_user', JSON.stringify(response.user));
         
         // Call onLogin with user data
         onLogin(response.user as User);
