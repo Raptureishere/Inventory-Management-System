@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import logo from '../src/assets/hms.png';
 import { User } from '../types';
 import api from '../services/api';
 import { userStorage } from '../services/storageService';
@@ -68,8 +69,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         {/* Content Overlay */}
         <div className="relative z-10 w-full max-w-md">
             <div className="text-center mb-8">
-                <div className="inline-block bg-white p-4 rounded-full shadow-lg mb-4">
-                    <i className="fas fa-clinic-medical text-5xl text-teal-600"></i>
+                <div className="inline-block bg-white p-2 rounded-full shadow-lg mb-4">
+                    <img src={logo} alt="HMS Logo" className="w-16 h-16 object-contain" />
                 </div>
                 <h2 className="text-3xl font-bold text-gray-900">Clinic Inventory</h2>
                 <p className="text-gray-600 mt-2">Healthcare Management System</p>

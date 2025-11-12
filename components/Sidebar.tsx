@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import logo from '../src/assets/hms.png';
 import { NavLink } from 'react-router-dom';
 import { User } from '../types';
 import { requisitionStorage } from '../services/storageService';
@@ -107,9 +108,11 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, user, isCollapsed, onToggle
       </button>
 
       <div className={`p-5 border-b border-slate-700 flex items-center space-x-3 ${isCollapsed ? 'justify-center' : ''}`}>
-        <div className="bg-teal-600 p-2 rounded-lg flex-shrink-0">
-            <i className="fas fa-clinic-medical text-white text-xl"></i>
-        </div>
+        <img
+          src={logo}
+          alt="Clinic Inventory Logo"
+          className="w-10 h-10 rounded-lg object-contain flex-shrink-0"
+        />
         <div className={`overflow-hidden whitespace-nowrap transition-all duration-200 ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
             <h1 className="text-lg font-bold text-white">Clinic Inventory</h1>
             <p className="text-xs text-teal-300">Healthcare Management</p>
