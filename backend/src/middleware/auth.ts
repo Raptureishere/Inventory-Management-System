@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 import { UserRole } from '../entities/User';
 
 export interface AuthRequest extends Request {
@@ -18,8 +18,13 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
       return res.status(401).json({ message: 'No token provided' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default-secret-key') as any;
-    req.user = decoded;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default-secret-key');
+    if (typeof decoded === 'string') {
+      return res.status(401).json({ message: 'Invalid token' });
+    }
+
+    const payload = decoded as JwtPayload & { id: number; username: string; role: UserRole };
+    req.user = { id: payload.id, username: payload.username, role: payload.role };
     next();
   } catch (error) {
     return res.status(401).json({ message: 'Invalid token' });

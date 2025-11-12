@@ -1,8 +1,8 @@
 import { Response } from 'express';
 import { AppDataSource } from '../config/database';
-import { Item } from '../entities/Item';
+import { Item, ItemCategory } from '../entities/Item';
 import { AuthRequest } from '../middleware/auth';
-import { Like } from 'typeorm';
+import { Like, FindOptionsWhere } from 'typeorm';
 
 export class ItemController {
   private itemRepository = AppDataSource.getRepository(Item);
@@ -10,15 +10,17 @@ export class ItemController {
   getAll = async (req: AuthRequest, res: Response) => {
     try {
       const { page = 1, limit = 20, search, category } = req.query;
+
+      const where: FindOptionsWhere<Item> = {};
       
-      const where: any = {};
-      
-      if (search) {
+      if (typeof search === 'string' && search.length > 0) {
         where.itemName = Like(`%${search}%`);
       }
       
-      if (category) {
-        where.category = category;
+      if (typeof category === 'string' && category.length > 0) {
+        if ((Object.values(ItemCategory) as string[]).includes(category)) {
+          where.category = category as ItemCategory;
+        }
       }
 
       const [items, total] = await this.itemRepository.findAndCount({

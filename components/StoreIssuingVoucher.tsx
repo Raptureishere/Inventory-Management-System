@@ -60,35 +60,52 @@ const StoreIssuingVoucher: React.FC = () => {
     
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        const formEl = e.currentTarget; // capture before any await to avoid React event pooling issues
         if (!requisition) {
             showToast('Requisition not found', 'error');
             return;
         }
 
         try {
-            const ok = await confirm('Issue the selected quantities and create the voucher?', { title: 'Confirm Issue', confirmText: 'Issue Items', cancelText: 'Go Back' });
+        const ok = await confirm('Issue the selected quantities and create the voucher?', { title: 'Confirm Issue', confirmText: 'Issue Items', cancelText: 'Go Back' });
             if (!ok) return;
 
-            // Allow creating a pending voucher even if nothing is issued, with confirmation
-            const anyIssued = issuedItems.some(i => i.issuedQty > 0);
+        // Build a full list of requested items merged with the current issued quantities.
+        const mergedItems = requisition.requestedItems.map(reqItem => {
+            const stockItem = stockItems.find(stock => stock.id === reqItem.itemId);
+            const stateItem = issuedItems.find(item => item.itemId === reqItem.itemId);
+            const availableStock = stockItem?.quantity ?? 0;
+            const requestedQty = reqItem.quantity;
+            const issuedQty = Math.max(
+                0,
+                Math.min(stateItem?.issuedQty ?? 0, requestedQty, availableStock)
+            );
+            return {
+                itemId: reqItem.itemId,
+                itemName: reqItem.itemName,
+                requestedQty,
+                issuedQty,
+                balance: availableStock - issuedQty,
+            };
+        });
+
+        const anyIssued = mergedItems.some(i => i.issuedQty > 0);
             if (!anyIssued) {
                 const proceed = await confirm('No items are being issued. Create a pending voucher?', { title: 'Confirm', confirmText: 'Create Pending Voucher', cancelText: 'Cancel' });
                 if (!proceed) return;
             }
 
             // 1. Update stock quantities (only if items are being issued)
-            const updatedStockItems = [...stockItems];
-            if (anyIssued) {
-                issuedItems.forEach(issuedItem => {
-                    if (issuedItem.issuedQty > 0) {
-                        const stockItemIndex = updatedStockItems.findIndex(stock => stock.id === issuedItem.itemId);
-                        if (stockItemIndex > -1) {
-                            updatedStockItems[stockItemIndex].quantity -= issuedItem.issuedQty;
-                        }
-                    }
-                });
-                itemStorage.save(updatedStockItems);
+        const updatedStockItems = stockItems.map(stock => {
+            const issuedDetail = mergedItems.find(item => item.itemId === stock.id);
+            if (!issuedDetail || issuedDetail.issuedQty <= 0) {
+                return stock;
             }
+            return { ...stock, quantity: Math.max(0, stock.quantity - issuedDetail.issuedQty) };
+        });
+        if (anyIssued) {
+            itemStorage.save(updatedStockItems);
+        }
 
             // 2. Update requisition status (only mark as ISSUED if items were actually issued)
             const allRequisitions = requisitionStorage.get();
@@ -107,21 +124,20 @@ const StoreIssuingVoucher: React.FC = () => {
             // 3. Upsert issued item record (update existing pending or create new)
             const allIssuedRecords = issuedRecordStorage.get();
             const existingIndex = allIssuedRecords.findIndex(r => r.requisitionId === requisition.id);
-            const allFullyIssued = issuedItems.every(i => i.issuedQty === i.requestedQty && i.issuedQty > 0);
-            const anyPartial = issuedItems.some(i => i.issuedQty > 0 && i.issuedQty < i.requestedQty);
+        const allFullyIssued = mergedItems.length > 0 && mergedItems.every(i => i.issuedQty === i.requestedQty && i.issuedQty > 0);
+        const anyPartial = mergedItems.some(i => i.issuedQty > 0 && i.issuedQty < i.requestedQty);
 
-            // Save ALL items so the voucher details show everything requested
-            // Balance should be the stock balance AFTER issuing (use updated stock if items were issued, otherwise original stock)
-            const computedItems = issuedItems.map(item => {
-                const stockItem = anyIssued 
-                    ? updatedStockItems.find(s => s.id === item.itemId)
-                    : stockItems.find(s => s.id === item.itemId);
-                const stockBalance = stockItem ? stockItem.quantity : 0;
-                return {
-                    ...item,
-                    balance: Math.max(0, stockBalance),
-                };
-            });
+        // Save ALL items so the voucher details show everything requested with the post-issue balance.
+        const itemsWithBalance = mergedItems.map(item => {
+            const stockItem = updatedStockItems.find(s => s.id === item.itemId) ?? stockItems.find(s => s.id === item.itemId);
+            return {
+                ...item,
+                balance: Math.max(0, stockItem?.quantity ?? item.balance ?? 0),
+            };
+        });
+
+            const formData = new FormData(formEl);
+            const notesValue = (formData.get('notes') ?? '').toString();
 
             const baseRecord: IssuedItemRecord = {
                 id: existingIndex > -1 ? allIssuedRecords[existingIndex].id : (allIssuedRecords.length > 0 ? Math.max(...allIssuedRecords.map(r => r.id)) + 1 : 201),
@@ -129,9 +145,9 @@ const StoreIssuingVoucher: React.FC = () => {
                 voucherId: `SIV-${new Date().getFullYear()}-${String(requisition.id).padStart(3, '0')}`,
                 departmentName: requisition.departmentName,
                 issueDate: new Date().toISOString().split('T')[0],
-                notes: (e.currentTarget.elements.namedItem('notes') as HTMLTextAreaElement).value,
+                notes: notesValue,
                 status: allFullyIssued ? IssuedItemStatus.ISSUED : (anyPartial || anyIssued ? IssuedItemStatus.PARTIALLY_ISSUED : IssuedItemStatus.PENDING),
-                issuedItems: computedItems,
+                issuedItems: itemsWithBalance,
             };
 
             if (existingIndex > -1) {

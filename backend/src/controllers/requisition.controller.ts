@@ -3,6 +3,7 @@ import { AppDataSource } from '../config/database';
 import { Requisition, RequisitionStatus } from '../entities/Requisition';
 import { RequisitionItem } from '../entities/RequisitionItem';
 import { AuthRequest } from '../middleware/auth';
+import { FindOptionsWhere } from 'typeorm';
 
 export class RequisitionController {
   private requisitionRepository = AppDataSource.getRepository(Requisition);
@@ -11,10 +12,16 @@ export class RequisitionController {
   getAll = async (req: AuthRequest, res: Response) => {
     try {
       const { status, department } = req.query;
-      
-      const where: any = {};
-      if (status) where.status = status;
-      if (department) where.departmentName = department;
+
+      const where: FindOptionsWhere<Requisition> = {};
+      if (typeof status === 'string') {
+        if ((Object.values(RequisitionStatus) as string[]).includes(status)) {
+          where.status = status as RequisitionStatus;
+        }
+      }
+      if (typeof department === 'string') {
+        where.departmentName = department;
+      }
 
       const requisitions = await this.requisitionRepository.find({
         where,
@@ -60,7 +67,7 @@ export class RequisitionController {
       await this.requisitionRepository.save(requisition);
 
       if (items && items.length > 0) {
-        const requisitionItems = items.map((item: any) =>
+        const requisitionItems = items.map((item: { itemId: number; itemName: string; requestedQty: number }) =>
           this.requisitionItemRepository.create({
             requisitionId: requisition.id,
             itemId: item.itemId,

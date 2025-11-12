@@ -5,6 +5,7 @@ import { IssuingItem } from '../entities/IssuingItem';
 import { Item } from '../entities/Item';
 import { Requisition, RequisitionStatus } from '../entities/Requisition';
 import { AuthRequest } from '../middleware/auth';
+import { FindOptionsWhere } from 'typeorm';
 
 export class IssuingController {
   private voucherRepository = AppDataSource.getRepository(IssuingVoucher);
@@ -15,9 +16,13 @@ export class IssuingController {
   getAll = async (req: AuthRequest, res: Response) => {
     try {
       const { status } = req.query;
-      
-      const where: any = {};
-      if (status) where.status = status;
+
+      const where: FindOptionsWhere<IssuingVoucher> = {};
+      if (typeof status === 'string') {
+        if ((Object.values(VoucherStatus) as string[]).includes(status)) {
+          where.status = status as VoucherStatus;
+        }
+      }
 
       const vouchers = await this.voucherRepository.find({
         where,
@@ -78,7 +83,7 @@ export class IssuingController {
 
       // Create issuing items and update inventory
       if (items && items.length > 0) {
-        for (const itemData of items) {
+        for (const itemData of items as Array<{ itemId: number; requestedQty: number; issuedQty: number }>) {
           const item = await this.itemRepository.findOne({
             where: { id: itemData.itemId }
           });
@@ -153,7 +158,7 @@ export class IssuingController {
         return res.status(404).json({ message: 'Voucher not found' });
       }
 
-      const { items, notes } = req.body;
+      const { items, notes } = req.body as { items?: Array<{ id: number; issuedQty: number }>; notes?: string };
 
       if (notes !== undefined) {
         voucher.notes = notes;

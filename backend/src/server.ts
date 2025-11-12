@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import express from 'express';
-import cors from 'cors';
+import cors, { CorsOptions } from 'cors';
 import bcrypt from 'bcrypt';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -26,12 +26,16 @@ app.use(helmet());
 const originEnv = process.env.CORS_ORIGIN;
 const allowedOrigins = originEnv ? originEnv.split(',').map(o => o.trim()) : '*';
 
-app.use(cors({
-  origin: allowedOrigins as any,
+const corsOptions: CorsOptions = {
+  origin: (allowedOrigins as string) === '*'
+    ? '*'
+    : (allowedOrigins as string[]),
   credentials: false,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
-}));
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(morgan('dev'));
 

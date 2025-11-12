@@ -4,6 +4,7 @@ import { PurchaseOrder, PurchaseOrderStatus } from '../entities/PurchaseOrder';
 import { PurchaseOrderItem } from '../entities/PurchaseOrderItem';
 import { Item } from '../entities/Item';
 import { AuthRequest } from '../middleware/auth';
+import { FindOptionsWhere } from 'typeorm';
 
 export class PurchaseOrderController {
   private poRepository = AppDataSource.getRepository(PurchaseOrder);
@@ -13,10 +14,16 @@ export class PurchaseOrderController {
   getAll = async (req: AuthRequest, res: Response) => {
     try {
       const { status, supplierId } = req.query;
-      
-      const where: any = {};
-      if (status) where.status = status;
-      if (supplierId) where.supplierId = Number(supplierId);
+
+      const where: FindOptionsWhere<PurchaseOrder> = {};
+      if (typeof status === 'string') {
+        if ((Object.values(PurchaseOrderStatus) as string[]).includes(status)) {
+          where.status = status as PurchaseOrderStatus;
+        }
+      }
+      if (typeof supplierId === 'string' && supplierId.trim().length > 0) {
+        where.supplierId = Number(supplierId);
+      }
 
       const purchaseOrders = await this.poRepository.find({
         where,
@@ -66,7 +73,7 @@ export class PurchaseOrderController {
       let totalAmount = 0;
 
       if (items && items.length > 0) {
-        for (const itemData of items) {
+        for (const itemData of items as Array<{ itemId: number; itemName: string; orderedQty: number; unitPrice: number }>) {
           const totalPrice = itemData.orderedQty * itemData.unitPrice;
           totalAmount += totalPrice;
 
@@ -113,7 +120,7 @@ export class PurchaseOrderController {
         return res.status(400).json({ message: 'Purchase order already received' });
       }
 
-      const { actualDeliveryDate, items } = req.body;
+      const { actualDeliveryDate, items } = req.body as { actualDeliveryDate?: Date; items?: Array<{ id: number; receivedQty: number }> };
 
       po.actualDeliveryDate = actualDeliveryDate || new Date();
       po.status = PurchaseOrderStatus.RECEIVED;

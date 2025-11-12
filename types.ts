@@ -33,7 +33,10 @@ export interface Item {
   quantity: number;
   unit: string;
   dateReceived: string;
-  supplier: string;
+  supplier?: string;
+  supplierId?: number | null;
+  unitPrice?: number;
+  reorderLevel?: number;
 }
 
 export interface RequestedItem {
