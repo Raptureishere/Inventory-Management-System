@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DEPARTMENTS } from '../constants';
-import { requisitionStorage, itemStorage } from '../services/storageService';
-import { Requisition, RequisitionStatus, User, RequestedItem, Item } from '../types';
+import { requisitionStorage, itemStorage, issuedRecordStorage } from '../services/storageService';
+import { Requisition, RequisitionStatus, User, RequestedItem, Item, IssuedItemRecord, IssuedItemStatus } from '../types';
 import { useUI } from './ui/UIContext';
 import { StyledInput, StyledSelect, PrimaryButton, SecondaryButton } from './ui/Controls';
 
@@ -267,6 +267,26 @@ const RequisitionBook: React.FC<RequisitionBookProps> = ({ user }) => {
         );
         setRequisitions(updatedRequisitions);
         requisitionStorage.save(updatedRequisitions);
+        // Ensure a pending issued record exists so it appears in Issued Records immediately
+        const allIssuedRecords = issuedRecordStorage.get();
+        const existing = allIssuedRecords.find(r => r.requisitionId === requisitionId);
+        if (!existing) {
+            const req = updatedRequisitions.find(r => r.id === requisitionId);
+            if (req) {
+                const newRecordId = allIssuedRecords.length > 0 ? Math.max(...allIssuedRecords.map(r => r.id)) + 1 : 201;
+                const pendingRecord: IssuedItemRecord = {
+                    id: newRecordId,
+                    requisitionId: req.id,
+                    voucherId: `SIV-${new Date().getFullYear()}-${String(req.id).padStart(3, '0')}`,
+                    departmentName: req.departmentName,
+                    issueDate: new Date().toISOString().split('T')[0],
+                    notes: '',
+                    status: IssuedItemStatus.PENDING,
+                    issuedItems: []
+                };
+                issuedRecordStorage.save([...allIssuedRecords, pendingRecord]);
+            }
+        }
         navigate(`/store-issuing-voucher/${requisitionId}`);
         showToast('Request forwarded to issuing', 'success');
     };

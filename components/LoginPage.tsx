@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User } from '../types';
 import api from '../services/api';
+import { userStorage } from '../services/storageService';
 
 interface LoginPageProps {
   onLogin: (user: User) => void;
@@ -31,8 +32,22 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         setError('Invalid response from server');
       }
     } catch (err: any) {
-      setError(err.message || 'Invalid username or password');
       console.error('Login error:', err);
+      // Fallback to local mock users if backend is unreachable
+      try {
+        const users = userStorage.get();
+        const found = users.find(u => u.username === username && (u as any).password === password);
+        if (found) {
+          const user = { id: found.id, username: found.username, role: found.role } as User;
+          localStorage.setItem('hims_user', JSON.stringify(user));
+          localStorage.setItem('token', 'mock-token');
+          onLogin(user);
+          return;
+        }
+        setError('Invalid username or password');
+      } catch (fallbackErr) {
+        setError(err?.message === 'Failed to fetch' ? 'Cannot reach server. Please start the backend or check network.' : (err?.message || 'Login failed'));
+      }
     } finally {
       setIsLoading(false);
     }

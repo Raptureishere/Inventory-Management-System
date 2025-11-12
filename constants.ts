@@ -81,7 +81,7 @@ export const MOCK_REQUISITIONS: Requisition[] = [
 export const MOCK_ISSUED_RECORDS: IssuedItemRecord[] = [
     {
         id: 201, requisitionId: 104, voucherId: 'SIV-2023-001', departmentName: 'ICU',
-        issueDate: '2023-10-19', notes: 'Urgent request fulfilled.', status: IssuedItemStatus.FULLY_PROVIDED,
+        issueDate: '2023-10-19', notes: 'Urgent request fulfilled.', status: IssuedItemStatus.ISSUED,
         issuedItems: [
             { itemId: 7, itemName: 'Surgical Masks', requestedQty: 50, issuedQty: 50, balance: 450 }
         ]

@@ -78,8 +78,8 @@ export interface StoreIssuingVoucher {
 
 export enum IssuedItemStatus {
     PENDING = 'Pending',
-    PARTIALLY_PROVIDED = 'Partially Provided',
-    FULLY_PROVIDED = 'Fully Provided',
+    PARTIALLY_ISSUED = 'Partially Issued',
+    ISSUED = 'Issued',
 }
 
 export interface IssuedItemRecord extends StoreIssuingVoucher {

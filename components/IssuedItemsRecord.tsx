@@ -77,26 +77,32 @@ const IssuedRecordDetailsModal: React.FC<{
                     )}
 
                     <h3 className="text-lg font-semibold text-gray-800 mb-2 mt-4">Issued Items</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Item Name</th>
-                                <th style={{ textAlign: 'center' }}>Requested Qty</th>
-                                <th style={{ textAlign: 'center' }}>Issued Qty</th>
-                                <th style={{ textAlign: 'center' }}>Balance After Issue</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {record.issuedItems.map((item, index) => (
-                                <tr key={index}>
-                                    <td>{item.itemName}</td>
-                                    <td style={{ textAlign: 'center' }}>{item.requestedQty}</td>
-                                    <td style={{ textAlign: 'center' }}>{item.issuedQty}</td>
-                                    <td style={{ textAlign: 'center' }}>{item.balance}</td>
+                    {record.issuedItems && record.issuedItems.length > 0 ? (
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Item Name</th>
+                                    <th style={{ textAlign: 'center' }}>Requested Qty</th>
+                                    <th style={{ textAlign: 'center' }}>Issued Qty</th>
+                                    <th style={{ textAlign: 'center' }}>Balance After Issue</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {record.issuedItems.map((item, index) => (
+                                    <tr key={index}>
+                                        <td>{item.itemName}</td>
+                                        <td style={{ textAlign: 'center' }}>{item.requestedQty}</td>
+                                        <td style={{ textAlign: 'center' }}>{item.issuedQty}</td>
+                                        <td style={{ textAlign: 'center' }}>{item.balance}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <div className="text-gray-500 text-center py-4">
+                            <p>No items in this voucher.</p>
+                        </div>
+                    )}
                 </div>
                  {/* End of content to be printed */}
 
@@ -133,7 +139,16 @@ const IssuedItemsRecord: React.FC = () => {
     const location = useLocation() as any;
 
     useEffect(() => {
-        const highlightId = location?.state?.highlightId as number | undefined;
+        let highlightId = location?.state?.highlightId as number | undefined;
+        if (!highlightId) {
+            try {
+                const fromSession = sessionStorage.getItem('issued_highlight_id');
+                if (fromSession) {
+                    highlightId = parseInt(fromSession);
+                    sessionStorage.removeItem('issued_highlight_id');
+                }
+            } catch {}
+        }
         if (highlightId) {
             // Refresh records to ensure latest is included
             const latest = issuedRecordStorage.get();
@@ -150,6 +165,26 @@ const IssuedItemsRecord: React.FC = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // Keep list in sync if storage changes elsewhere (e.g., when a requisition is forwarded)
+    useEffect(() => {
+        const handleStorage = (e: StorageEvent) => {
+            if (e.key === 'hims_issued_records') {
+                setRecords(issuedRecordStorage.get());
+            }
+        };
+        const handleVisibility = () => {
+            if (!document.hidden) {
+                setRecords(issuedRecordStorage.get());
+            }
+        };
+        window.addEventListener('storage', handleStorage);
+        document.addEventListener('visibilitychange', handleVisibility);
+        return () => {
+            window.removeEventListener('storage', handleStorage);
+            document.removeEventListener('visibilitychange', handleVisibility);
+        };
+    }, []);
+
     const filteredRecords = useMemo(() => {
         return records
             .filter(rec => filterDept ? rec.departmentName === filterDept : true)
@@ -158,11 +193,19 @@ const IssuedItemsRecord: React.FC = () => {
 
     const handleMarkProvided = (recordId: number) => {
         const updatedRecords = records.map(rec => 
-            rec.id === recordId ? { ...rec, status: IssuedItemStatus.FULLY_PROVIDED } : rec
+            rec.id === recordId ? { ...rec, status: IssuedItemStatus.ISSUED } : rec
         );
         setRecords(updatedRecords);
         issuedRecordStorage.save(updatedRecords);
-        showToast('Voucher marked as Fully Provided', 'success');
+        showToast('Voucher marked as Issued', 'success');
+    };
+
+    const handleDeleteRecord = (recordId: number) => {
+        if (!confirm('Delete this issued record? This cannot be undone.')) return;
+        const updatedRecords = records.filter(r => r.id !== recordId);
+        setRecords(updatedRecords);
+        issuedRecordStorage.save(updatedRecords);
+        showToast('Issued record deleted', 'info');
     };
 
     const handleViewDetails = (record: IssuedItemRecord) => {
@@ -224,7 +267,7 @@ const IssuedItemsRecord: React.FC = () => {
                                     <td className="px-6 py-4">
                                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                                             record.status === IssuedItemStatus.PENDING ? 'bg-yellow-200 text-yellow-800' :
-                                            record.status === IssuedItemStatus.PARTIALLY_PROVIDED ? 'bg-amber-200 text-amber-900' :
+                                            record.status === IssuedItemStatus.PARTIALLY_ISSUED ? 'bg-amber-200 text-amber-900' :
                                             'bg-green-200 text-green-800'
                                         }`}>{record.status}</span>
                                     </td>
@@ -237,14 +280,22 @@ const IssuedItemsRecord: React.FC = () => {
                                         >
                                             <i className="fas fa-eye" aria-hidden="true"></i>
                                         </button>
-                                        {record.status === IssuedItemStatus.PENDING && (
+                                        {(record.status === IssuedItemStatus.PENDING || record.status === IssuedItemStatus.PARTIALLY_ISSUED) && (
                                             <button 
                                                 onClick={() => handleMarkProvided(record.id)}
                                                 className="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600"
                                             >
-                                                Mark as Provided
+                                                Mark as Issued
                                             </button>
                                         )}
+                                        <button
+                                            onClick={() => handleDeleteRecord(record.id)}
+                                            className="text-red-600 hover:text-red-800 ml-3"
+                                            title="Delete Issued Record"
+                                            aria-label={`Delete issued record ${record.voucherId}`}
+                                        >
+                                            <i className="fas fa-trash" aria-hidden="true"></i>
+                                        </button>
                                     </td>
                                 </tr>
                             ))}
