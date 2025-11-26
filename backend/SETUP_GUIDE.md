@@ -51,7 +51,6 @@ API_PREFIX=/api/v1
 
 # Database (Neon)
 DATABASE_URL=postgresql://username:password@ep-xxx.neon.tech/inventory_db?sslmode=require
-
 # Or for local PostgreSQL
 # DATABASE_URL=postgresql://localhost:5432/inventory_db
 # DB_HOST=localhost
