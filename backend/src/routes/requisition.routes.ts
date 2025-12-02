@@ -10,7 +10,9 @@ router.use(authenticate);
 router.get('/', requisitionController.getAll);
 router.get('/:id', requisitionController.getById);
 router.post('/', requisitionController.create);
+router.put('/:id', requisitionController.update);
 router.put('/:id/forward', requisitionController.forward);
 router.put('/:id/cancel', requisitionController.cancel);
+router.delete('/:id', requisitionController.delete);
 
 export default router;

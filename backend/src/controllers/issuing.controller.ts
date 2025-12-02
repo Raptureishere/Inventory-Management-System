@@ -225,4 +225,38 @@ export class IssuingController {
       res.status(500).json({ message: 'Server error', error });
     }
   };
+  delete = async (req: AuthRequest, res: Response) => {
+    try {
+      const voucher = await this.voucherRepository.findOne({
+        where: { id: Number(req.params.id) },
+        relations: ['items']
+      });
+
+      if (!voucher) {
+        return res.status(404).json({ message: 'Voucher not found' });
+      }
+
+      // Restore stock
+      if (voucher.items) {
+        for (const issuingItem of voucher.items) {
+          const item = await this.itemRepository.findOne({ where: { id: issuingItem.itemId } });
+          if (item) {
+            item.quantity += issuingItem.issuedQty;
+            await this.itemRepository.save(item);
+          }
+        }
+      }
+
+      // Delete issuing items
+      await this.issuingItemRepository.delete({ voucherId: voucher.id });
+
+      // Delete voucher
+      await this.voucherRepository.remove(voucher);
+
+      res.json({ message: 'Voucher deleted successfully' });
+    } catch (error) {
+      res.status(500).json({ message: 'Server error', error });
+    }
+  };
 }
+

@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DEPARTMENTS } from '../constants';
-import { requisitionStorage, itemStorage, issuedRecordStorage } from '../services/storageService';
+import { itemStorage, issuedRecordStorage } from '../services/storageService';
+import { api } from '../services/api';
 import { Requisition, RequisitionStatus, User, RequestedItem, Item, IssuedItemRecord, IssuedItemStatus } from '../types';
 import { useUI } from './ui/UIContext';
 import { StyledInput, StyledSelect, PrimaryButton, SecondaryButton } from './ui/Controls';
@@ -13,7 +14,7 @@ const CreateRequisitionModal: React.FC<{
     currentUser: User;
     availableItems: Item[];
 }> = ({ isOpen, onClose, onSubmit, currentUser, availableItems }) => {
-    
+
     const [departmentName, setDepartmentName] = useState(DEPARTMENTS[0]);
     const [requestedItems, setRequestedItems] = useState<Partial<RequestedItem>[]>([{ itemId: undefined, quantity: 1 }]);
 
@@ -50,12 +51,12 @@ const CreateRequisitionModal: React.FC<{
                 itemName: availableItems.find(i => i.id === item.itemId)?.itemName || 'Unknown',
                 quantity: item.quantity!
             }));
-        
+
         if (finalItems.length === 0) {
             alert('Please add at least one valid item with a quantity greater than 0.');
             return;
         }
-        
+
         onSubmit({
             departmentName,
             requestedItems: finalItems,
@@ -77,7 +78,7 @@ const CreateRequisitionModal: React.FC<{
                             {DEPARTMENTS.map(dept => <option key={dept} value={dept}>{dept}</option>)}
                         </StyledSelect>
                     </div>
-                    
+
                     <div className="mb-4">
                         <label className="block text-sm font-medium text-slate-600 mb-2">Requested Items</label>
                         <div className="space-y-2">
@@ -88,14 +89,14 @@ const CreateRequisitionModal: React.FC<{
                                         {availableItems.map(stockItem => <option key={stockItem.id} value={stockItem.id}>{stockItem.itemName}</option>)}
                                     </StyledSelect>
                                     <div className="relative">
-                                        <StyledInput 
-                                            type="number" 
-                                            value={item.quantity || ''} 
-                                            onChange={e => handleQuantityChange(index, e.target.value)} 
-                                            min="1" 
+                                        <StyledInput
+                                            type="number"
+                                            value={item.quantity || ''}
+                                            onChange={e => handleQuantityChange(index, e.target.value)}
+                                            min="1"
                                             step="1"
                                             placeholder="Qty"
-                                            className="w-28 pr-8" 
+                                            className="w-28 pr-8"
                                             aria-label="Quantity"
                                         />
                                         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">qty</span>
@@ -106,7 +107,7 @@ const CreateRequisitionModal: React.FC<{
                                 </div>
                             ))}
                         </div>
-                         <button type="button" onClick={handleAddItem} className="text-sm font-medium text-sky-600 hover:text-sky-800 mt-2">+ Add Another Item</button>
+                        <button type="button" onClick={handleAddItem} className="text-sm font-medium text-sky-600 hover:text-sky-800 mt-2">+ Add Another Item</button>
                     </div>
 
                     <div className="flex justify-end space-x-3 mt-6">
@@ -176,12 +177,12 @@ const EditRequisitionModal: React.FC<{
         e.preventDefault();
         const finalItems = formData.requestedItems
             .filter(item => item.itemId !== 0 && item.quantity > 0);
-        
+
         if (finalItems.length === 0) {
             alert('A requisition must have at least one valid item with a quantity greater than 0.');
             return;
         }
-        
+
         onSave({ ...formData, requestedItems: finalItems });
     };
 
@@ -196,7 +197,7 @@ const EditRequisitionModal: React.FC<{
                             {DEPARTMENTS.map(dept => <option key={dept} value={dept}>{dept}</option>)}
                         </StyledSelect>
                     </div>
-                    
+
                     <div className="mb-4">
                         <label className="block text-sm font-medium text-slate-600 mb-2">Requested Items</label>
                         <div className="space-y-2">
@@ -207,14 +208,14 @@ const EditRequisitionModal: React.FC<{
                                         {availableItems.map(stockItem => <option key={stockItem.id} value={stockItem.id}>{stockItem.itemName}</option>)}
                                     </StyledSelect>
                                     <div className="relative">
-                                        <StyledInput 
-                                            type="number" 
-                                            value={item.quantity || ''} 
-                                            onChange={e => handleQuantityChange(index, e.target.value)} 
-                                            min="1" 
+                                        <StyledInput
+                                            type="number"
+                                            value={item.quantity || ''}
+                                            onChange={e => handleQuantityChange(index, e.target.value)}
+                                            min="1"
                                             step="1"
                                             placeholder="Qty"
-                                            className="w-28 pr-8" 
+                                            className="w-28 pr-8"
                                             aria-label="Quantity"
                                         />
                                         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">qty</span>
@@ -225,7 +226,7 @@ const EditRequisitionModal: React.FC<{
                                 </div>
                             ))}
                         </div>
-                         <button type="button" onClick={handleAddItem} className="text-sm font-medium text-sky-600 hover:text-sky-800 mt-2">+ Add Another Item</button>
+                        <button type="button" onClick={handleAddItem} className="text-sm font-medium text-sky-600 hover:text-sky-800 mt-2">+ Add Another Item</button>
                     </div>
 
                     <div className="flex justify-end space-x-3 mt-6">
@@ -239,11 +240,11 @@ const EditRequisitionModal: React.FC<{
 };
 
 interface RequisitionBookProps {
-  user: User | null;
+    user: User | null;
 }
 
 const RequisitionBook: React.FC<RequisitionBookProps> = ({ user }) => {
-    const [requisitions, setRequisitions] = useState<Requisition[]>(() => requisitionStorage.get());
+    const [requisitions, setRequisitions] = useState<Requisition[]>([]);
     const [availableItems] = useState<Item[]>(() => itemStorage.get());
     const [filterDept, setFilterDept] = useState('');
     const [filterStatus, setFilterStatus] = useState<RequisitionStatus | ''>('');
@@ -253,6 +254,20 @@ const RequisitionBook: React.FC<RequisitionBookProps> = ({ user }) => {
     const [editingRequisition, setEditingRequisition] = useState<Requisition | null>(null);
     const { confirm, showToast } = useUI();
 
+    const fetchRequisitions = async () => {
+        try {
+            const data = await api.getRequisitions();
+            setRequisitions(data);
+        } catch (error) {
+            console.error('Failed to fetch requisitions:', error);
+            showToast('Failed to load requisitions', 'error');
+        }
+    };
+
+    useEffect(() => {
+        fetchRequisitions();
+    }, []);
+
     const filteredRequisitions = useMemo(() => {
         return requisitions.filter(req => {
             const matchesDept = filterDept ? req.departmentName === filterDept : true;
@@ -261,67 +276,66 @@ const RequisitionBook: React.FC<RequisitionBookProps> = ({ user }) => {
         }).sort((a, b) => new Date(b.dateRequested).getTime() - new Date(a.dateRequested).getTime());
     }, [requisitions, filterDept, filterStatus]);
 
-    const handleForward = (requisitionId: number) => {
-        const updatedRequisitions = requisitions.map(req =>
-            req.id === requisitionId ? { ...req, status: RequisitionStatus.FORWARDED } : req
-        );
-        setRequisitions(updatedRequisitions);
-        requisitionStorage.save(updatedRequisitions);
-        // Ensure a pending issued record exists so it appears in Issued Records immediately
-        const allIssuedRecords = issuedRecordStorage.get();
-        const existing = allIssuedRecords.find(r => r.requisitionId === requisitionId);
-        if (!existing) {
-            const req = updatedRequisitions.find(r => r.id === requisitionId);
-            if (req) {
-                const newRecordId = allIssuedRecords.length > 0 ? Math.max(...allIssuedRecords.map(r => r.id)) + 1 : 201;
-                const pendingRecord: IssuedItemRecord = {
-                    id: newRecordId,
-                    requisitionId: req.id,
-                    voucherId: `SIV-${new Date().getFullYear()}-${String(req.id).padStart(3, '0')}`,
-                    departmentName: req.departmentName,
-                    issueDate: new Date().toISOString().split('T')[0],
-                    notes: '',
-                    status: IssuedItemStatus.PENDING,
-                    issuedItems: []
-                };
-                issuedRecordStorage.save([...allIssuedRecords, pendingRecord]);
-            }
+    const handleForward = async (requisitionId: number) => {
+        try {
+            await api.forwardRequisition(requisitionId);
+            fetchRequisitions();
+            navigate(`/store-issuing-voucher/${requisitionId}`);
+            showToast('Request forwarded to issuing', 'success');
+        } catch (error) {
+            console.error('Failed to forward requisition:', error);
+            showToast('Failed to forward requisition', 'error');
         }
-        navigate(`/store-issuing-voucher/${requisitionId}`);
-        showToast('Request forwarded to issuing', 'success');
     };
 
     const handleCancel = async (requisitionId: number) => {
         const ok = await confirm('Cancel this request? You cannot undo this.', { title: 'Cancel Request', confirmText: 'Cancel Request', cancelText: 'Keep' });
         if (!ok) return;
-            const updatedRequisitions = requisitions.map(req =>
-                req.id === requisitionId ? { ...req, status: RequisitionStatus.CANCELLED } : req
-            );
-            setRequisitions(updatedRequisitions);
-            requisitionStorage.save(updatedRequisitions);
-        showToast('Request cancelled', 'info');
+
+        try {
+            await api.cancelRequisition(requisitionId);
+            fetchRequisitions();
+            showToast('Request cancelled', 'info');
+        } catch (error) {
+            console.error('Failed to cancel requisition:', error);
+            showToast('Failed to cancel requisition', 'error');
+        }
     };
 
     const handleDelete = async (requisitionId: number) => {
         const ok = await confirm('Delete this request permanently? This cannot be undone.', { title: 'Delete Request', confirmText: 'Delete', cancelText: 'Cancel' });
         if (!ok) return;
-            const updatedRequisitions = requisitions.filter(req => req.id !== requisitionId);
-            setRequisitions(updatedRequisitions);
-            requisitionStorage.save(updatedRequisitions);
-        showToast('Request deleted', 'info');
+
+        try {
+            await api.deleteRequisition(requisitionId);
+            fetchRequisitions();
+            showToast('Request deleted', 'info');
+        } catch (error) {
+            console.error('Failed to delete requisition:', error);
+            showToast('Failed to delete requisition', 'error');
+        }
     };
 
-     const handleCreateRequisition = (newReqData: Omit<Requisition, 'id' | 'dateRequested' | 'status'>) => {
-        const newRequisition: Requisition = {
-            ...newReqData,
-            id: requisitions.length > 0 ? Math.max(...requisitions.map(r => r.id)) + 1 : 101,
-            dateRequested: new Date().toISOString(),
-            status: RequisitionStatus.PENDING,
-        };
-        const updatedRequisitions = [...requisitions, newRequisition];
-        setRequisitions(updatedRequisitions);
-        requisitionStorage.save(updatedRequisitions);
-        showToast('Request created', 'success');
+    const handleCreateRequisition = async (newReqData: Omit<Requisition, 'id' | 'dateRequested' | 'status'>) => {
+        try {
+            const payload = {
+                departmentName: newReqData.departmentName,
+                requisitionDate: new Date().toISOString(),
+                items: newReqData.requestedItems.map(item => ({
+                    itemId: item.itemId,
+                    itemName: item.itemName,
+                    requestedQty: item.quantity
+                })),
+                notes: ''
+            };
+
+            await api.createRequisition(payload);
+            fetchRequisitions();
+            showToast('Request created', 'success');
+        } catch (error) {
+            console.error('Failed to create requisition:', error);
+            showToast('Failed to create requisition', 'error');
+        }
     };
 
     const handleEditClick = (requisition: Requisition) => {
@@ -329,20 +343,33 @@ const RequisitionBook: React.FC<RequisitionBookProps> = ({ user }) => {
         setIsEditModalOpen(true);
     };
 
-    const handleUpdateRequisition = (updatedRequisition: Requisition) => {
-        const updatedRequisitions = requisitions.map(req => 
-            req.id === updatedRequisition.id ? updatedRequisition : req
-        );
-        setRequisitions(updatedRequisitions);
-        requisitionStorage.save(updatedRequisitions);
-        setIsEditModalOpen(false);
-        setEditingRequisition(null);
+    const handleUpdateRequisition = async (updatedRequisition: Requisition) => {
+        try {
+            const payload = {
+                departmentName: updatedRequisition.departmentName,
+                items: updatedRequisition.requestedItems.map(item => ({
+                    itemId: item.itemId,
+                    itemName: item.itemName,
+                    quantity: item.quantity
+                })),
+                notes: ''
+            };
+
+            await api.updateRequisition(updatedRequisition.id, payload);
+            fetchRequisitions();
+            setIsEditModalOpen(false);
+            setEditingRequisition(null);
+            showToast('Requisition updated', 'success');
+        } catch (error) {
+            console.error('Failed to update requisition:', error);
+            showToast('Failed to update requisition', 'error');
+        }
     };
-    
+
     return (
         <div className="space-y-6">
             {user && (
-                <CreateRequisitionModal 
+                <CreateRequisitionModal
                     isOpen={isCreateModalOpen}
                     onClose={() => setIsCreateModalOpen(false)}
                     onSubmit={handleCreateRequisition}
@@ -363,7 +390,7 @@ const RequisitionBook: React.FC<RequisitionBookProps> = ({ user }) => {
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-semibold text-slate-800">All Requisitions</h2>
                     <div className="flex space-x-2 items-center">
-                         <StyledSelect
+                        <StyledSelect
                             value={filterDept}
                             onChange={e => setFilterDept(e.target.value)}
                         >
@@ -412,12 +439,11 @@ const RequisitionBook: React.FC<RequisitionBookProps> = ({ user }) => {
                                         </ul>
                                     </td>
                                     <td className="px-6 py-4">
-                                         <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${
-                                            req.status === RequisitionStatus.PENDING ? 'bg-amber-100 text-amber-800' :
+                                        <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${req.status === RequisitionStatus.PENDING ? 'bg-amber-100 text-amber-800' :
                                             req.status === RequisitionStatus.FORWARDED ? 'bg-sky-100 text-sky-800' :
-                                            req.status === RequisitionStatus.ISSUED ? 'bg-emerald-100 text-emerald-800' :
-                                            req.status === RequisitionStatus.CANCELLED ? 'bg-slate-100 text-slate-800' : ''
-                                          }`}>{req.status}</span>
+                                                req.status === RequisitionStatus.ISSUED ? 'bg-emerald-100 text-emerald-800' :
+                                                    req.status === RequisitionStatus.CANCELLED ? 'bg-slate-100 text-slate-800' : ''
+                                            }`}>{req.status}</span>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center justify-center space-x-2">
@@ -425,14 +451,14 @@ const RequisitionBook: React.FC<RequisitionBookProps> = ({ user }) => {
                                                 <>
                                                     {req.status === RequisitionStatus.PENDING && (
                                                         <>
-                                                            <button 
+                                                            <button
                                                                 onClick={() => handleEditClick(req)}
                                                                 className="text-slate-500 hover:text-sky-600 p-2"
                                                                 title="Edit Requisition"
                                                             >
                                                                 <i className="fas fa-edit"></i>
                                                             </button>
-                                                            <button 
+                                                            <button
                                                                 onClick={() => handleForward(req.id)}
                                                                 className="bg-sky-500 text-white px-3 py-1 rounded text-xs hover:bg-sky-600"
                                                             >
@@ -441,7 +467,7 @@ const RequisitionBook: React.FC<RequisitionBookProps> = ({ user }) => {
                                                         </>
                                                     )}
                                                     {req.status === RequisitionStatus.FORWARDED && (
-                                                        <button 
+                                                        <button
                                                             onClick={() => navigate(`/store-issuing-voucher/${req.id}`)}
                                                             className="bg-emerald-500 text-white px-3 py-1 rounded text-xs hover:bg-emerald-600"
                                                         >
@@ -457,8 +483,8 @@ const RequisitionBook: React.FC<RequisitionBookProps> = ({ user }) => {
                                                             Cancel
                                                         </button>
                                                     )}
-                                                    <button 
-                                                        onClick={() => handleDelete(req.id)} 
+                                                    <button
+                                                        onClick={() => handleDelete(req.id)}
                                                         className="text-slate-500 hover:text-red-600 p-2"
                                                         title="Delete Requisition"
                                                     >
@@ -466,7 +492,7 @@ const RequisitionBook: React.FC<RequisitionBookProps> = ({ user }) => {
                                                     </button>
                                                 </>
                                             )}
-                                             {user?.role !== 'admin' && <span className="text-xs text-slate-400">Admin only</span>}
+                                            {user?.role !== 'admin' && <span className="text-xs text-slate-400">Admin only</span>}
                                         </div>
                                     </td>
                                 </tr>

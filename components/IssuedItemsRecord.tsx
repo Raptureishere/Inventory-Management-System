@@ -1,9 +1,19 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { DEPARTMENTS } from '../constants';
-import { issuedRecordStorage } from '../services/storageService';
+import { api } from '../services/api';
 import { IssuedItemRecord, IssuedItemStatus } from '../types';
 import { useUI } from './ui/UIContext';
 import { useLocation } from 'react-router-dom';
+
+// Helper to map backend status to frontend status
+const mapBackendStatus = (status: string): IssuedItemStatus => {
+    switch (status) {
+        case 'fully_provided': return IssuedItemStatus.ISSUED;
+        case 'partially_provided': return IssuedItemStatus.PARTIALLY_ISSUED;
+        case 'pending': return IssuedItemStatus.PENDING;
+        default: return IssuedItemStatus.PENDING;
+    }
+};
 
 const IssuedRecordDetailsModal: React.FC<{
     isOpen: boolean;
@@ -54,8 +64,8 @@ const IssuedRecordDetailsModal: React.FC<{
                 {/* Content to be printed */}
                 <div ref={printContentRef}>
                     <div className="print-header">
-                         <h1 className="text-2xl font-bold text-gray-800">Store Issuing Voucher</h1>
-                         <p>Mother and Child Hospital Inventory System</p>
+                        <h1 className="text-2xl font-bold text-gray-800">Store Issuing Voucher</h1>
+                        <p>Mother and Child Hospital Inventory System</p>
                     </div>
 
                     <div className="details-grid">
@@ -104,10 +114,10 @@ const IssuedRecordDetailsModal: React.FC<{
                         </div>
                     )}
                 </div>
-                 {/* End of content to be printed */}
+                {/* End of content to be printed */}
 
                 <div className="flex justify-end mt-6 no-print">
-                     <button onClick={onClose} className="px-5 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 mr-3">
+                    <button onClick={onClose} className="px-5 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 mr-3">
                         Close
                     </button>
                     <button onClick={handlePrint} className="px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" aria-label="Print Voucher">
@@ -115,7 +125,7 @@ const IssuedRecordDetailsModal: React.FC<{
                     </button>
                 </div>
             </div>
-             <style>{`
+            <style>{`
                 @keyframes fade-in-up {
                     from { opacity: 0; transform: translateY(20px); }
                     to { opacity: 1; transform: translateY(0); }
@@ -131,81 +141,77 @@ const IssuedRecordDetailsModal: React.FC<{
 
 
 const IssuedItemsRecord: React.FC = () => {
-    const [records, setRecords] = useState<IssuedItemRecord[]>(() => issuedRecordStorage.get());
+    const [records, setRecords] = useState<IssuedItemRecord[]>([]);
     const [filterDept, setFilterDept] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedRecord, setSelectedRecord] = useState<IssuedItemRecord | null>(null);
-    const { showToast } = useUI();
+    const { showToast, confirm } = useUI();
     const location = useLocation() as any;
 
+    const fetchRecords = async () => {
+        try {
+            const data = await api.getIssuingVouchers();
+            // Map backend data to frontend interface
+            const mappedRecords = data.map((v: any) => ({
+                id: v.id,
+                voucherId: v.voucherId,
+                requisitionId: v.requisitionId,
+                departmentName: v.requisition?.departmentName || 'Unknown', // Requisition might be loaded via relation
+                issueDate: v.issueDate,
+                notes: v.notes,
+                status: mapBackendStatus(v.status),
+                issuedItems: v.items.map((i: any) => ({
+                    itemId: i.itemId,
+                    itemName: i.itemName,
+                    requestedQty: i.requestedQty,
+                    issuedQty: i.issuedQty,
+                    balance: i.balance
+                }))
+            }));
+            setRecords(mappedRecords);
+        } catch (error) {
+            console.error('Failed to fetch issuing vouchers:', error);
+            showToast('Failed to load issued records', 'error');
+        }
+    };
+
+    useEffect(() => {
+        fetchRecords();
+    }, []);
+
+    // Handle highlight from navigation
     useEffect(() => {
         let highlightId = location?.state?.highlightId as number | undefined;
-        if (!highlightId) {
-            try {
-                const fromSession = sessionStorage.getItem('issued_highlight_id');
-                if (fromSession) {
-                    highlightId = parseInt(fromSession);
-                    sessionStorage.removeItem('issued_highlight_id');
-                }
-            } catch {}
-        }
-        if (highlightId) {
-            // Refresh records to ensure latest is included
-            const latest = issuedRecordStorage.get();
-            setRecords(latest);
-            const rec = latest.find(r => r.id === highlightId) || null;
+        if (highlightId && records.length > 0) {
+            const rec = records.find(r => r.id === highlightId) || null;
             if (rec) {
                 setSelectedRecord(rec);
                 setIsModalOpen(true);
                 showToast('Issued voucher created', 'success');
             }
-            // Clear state to avoid reopening on back/forward
+            // Clear state
             window.history.replaceState({}, document.title, window.location.pathname);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    // Keep list in sync if storage changes elsewhere (e.g., when a requisition is forwarded)
-    useEffect(() => {
-        const handleStorage = (e: StorageEvent) => {
-            if (e.key === 'hims_issued_records') {
-                setRecords(issuedRecordStorage.get());
-            }
-        };
-        const handleVisibility = () => {
-            if (!document.hidden) {
-                setRecords(issuedRecordStorage.get());
-            }
-        };
-        window.addEventListener('storage', handleStorage);
-        document.addEventListener('visibilitychange', handleVisibility);
-        return () => {
-            window.removeEventListener('storage', handleStorage);
-            document.removeEventListener('visibilitychange', handleVisibility);
-        };
-    }, []);
+    }, [location, records, showToast]);
 
     const filteredRecords = useMemo(() => {
         return records
             .filter(rec => filterDept ? rec.departmentName === filterDept : true)
-            .sort((a,b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime());
+            .sort((a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime());
     }, [records, filterDept]);
 
-    const handleMarkProvided = (recordId: number) => {
-        const updatedRecords = records.map(rec => 
-            rec.id === recordId ? { ...rec, status: IssuedItemStatus.ISSUED } : rec
-        );
-        setRecords(updatedRecords);
-        issuedRecordStorage.save(updatedRecords);
-        showToast('Voucher marked as Issued', 'success');
-    };
+    const handleDeleteRecord = async (recordId: number) => {
+        const ok = await confirm('Delete this issued record? This cannot be undone.', { title: 'Delete Record', confirmText: 'Delete', cancelText: 'Cancel' });
+        if (!ok) return;
 
-    const handleDeleteRecord = (recordId: number) => {
-        if (!confirm('Delete this issued record? This cannot be undone.')) return;
-        const updatedRecords = records.filter(r => r.id !== recordId);
-        setRecords(updatedRecords);
-        issuedRecordStorage.save(updatedRecords);
-        showToast('Issued record deleted', 'info');
+        try {
+            await api.deleteIssuingVoucher(recordId);
+            fetchRecords();
+            showToast('Issued record deleted', 'info');
+        } catch (error) {
+            console.error('Failed to delete voucher:', error);
+            showToast('Failed to delete record', 'error');
+        }
     };
 
     const handleViewDetails = (record: IssuedItemRecord) => {
@@ -220,7 +226,7 @@ const IssuedItemsRecord: React.FC = () => {
 
     return (
         <div>
-            <IssuedRecordDetailsModal 
+            <IssuedRecordDetailsModal
                 isOpen={isModalOpen}
                 onClose={handleCloseModal}
                 record={selectedRecord}
@@ -230,7 +236,7 @@ const IssuedItemsRecord: React.FC = () => {
             <div className="bg-white p-6 rounded-lg shadow-md">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-semibold">Completed Vouchers</h2>
-                     <select
+                    <select
                         value={filterDept}
                         onChange={e => setFilterDept(e.target.value)}
                         className="p-2 border rounded"
@@ -239,7 +245,7 @@ const IssuedItemsRecord: React.FC = () => {
                         {DEPARTMENTS.map(dept => <option key={dept} value={dept}>{dept}</option>)}
                     </select>
                 </div>
-                 <div className="overflow-x-auto">
+                <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left text-gray-500">
                         <thead className="text-xs text-gray-700 uppercase bg-gray-50">
                             <tr>
@@ -265,14 +271,13 @@ const IssuedItemsRecord: React.FC = () => {
                                     </td>
                                     <td className="px-6 py-4">{record.issueDate}</td>
                                     <td className="px-6 py-4">
-                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                            record.status === IssuedItemStatus.PENDING ? 'bg-yellow-200 text-yellow-800' :
-                                            record.status === IssuedItemStatus.PARTIALLY_ISSUED ? 'bg-amber-200 text-amber-900' :
-                                            'bg-green-200 text-green-800'
-                                        }`}>{record.status}</span>
+                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${record.status === IssuedItemStatus.PENDING ? 'bg-yellow-200 text-yellow-800' :
+                                                record.status === IssuedItemStatus.PARTIALLY_ISSUED ? 'bg-amber-200 text-amber-900' :
+                                                    'bg-green-200 text-green-800'
+                                            }`}>{record.status}</span>
                                     </td>
                                     <td className="px-6 py-4 text-center">
-                                        <button 
+                                        <button
                                             onClick={() => handleViewDetails(record)}
                                             className="text-blue-600 hover:text-blue-800 mr-3"
                                             title="View Details"
@@ -280,14 +285,6 @@ const IssuedItemsRecord: React.FC = () => {
                                         >
                                             <i className="fas fa-eye" aria-hidden="true"></i>
                                         </button>
-                                        {(record.status === IssuedItemStatus.PENDING || record.status === IssuedItemStatus.PARTIALLY_ISSUED) && (
-                                            <button 
-                                                onClick={() => handleMarkProvided(record.id)}
-                                                className="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600"
-                                            >
-                                                Mark as Issued
-                                            </button>
-                                        )}
                                         <button
                                             onClick={() => handleDeleteRecord(record.id)}
                                             className="text-red-600 hover:text-red-800 ml-3"

@@ -12,5 +12,6 @@ router.get('/', issuingController.getAll);
 router.get('/:id', issuingController.getById);
 router.post('/', authorize(UserRole.ADMIN), issuingController.create);
 router.put('/:id', authorize(UserRole.ADMIN), issuingController.update);
+router.delete('/:id', authorize(UserRole.ADMIN), issuingController.delete);
 
 export default router;

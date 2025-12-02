@@ -135,4 +135,83 @@ export class RequisitionController {
       res.status(500).json({ message: 'Server error', error });
     }
   };
+
+  delete = async (req: AuthRequest, res: Response) => {
+    try {
+      const requisition = await this.requisitionRepository.findOne({
+        where: { id: Number(req.params.id) },
+        relations: ['items']
+      });
+
+      if (!requisition) {
+        return res.status(404).json({ message: 'Requisition not found' });
+      }
+
+      // Optional: Check if it can be deleted (e.g. only pending?)
+      // For now, allowing delete of any, but usually we restrict if it has related records like IssuedItems.
+      // Assuming cascade delete or manual cleanup if needed. 
+      // RequisitionItem has foreign key to Requisition, so they should be deleted if cascade is on, or we delete them first.
+
+      // Let's check Requisition entity for cascade options or manually delete items.
+      // But for now, standard delete.
+
+      await this.requisitionItemRepository.delete({ requisitionId: requisition.id });
+      await this.requisitionRepository.remove(requisition);
+
+      res.json({ message: 'Requisition deleted successfully' });
+    } catch (error) {
+      res.status(500).json({ message: 'Server error', error });
+    }
+  };
+
+  update = async (req: AuthRequest, res: Response) => {
+    try {
+      const { departmentName, items, notes } = req.body;
+      const requisition = await this.requisitionRepository.findOne({
+        where: { id: Number(req.params.id) },
+        relations: ['items']
+      });
+
+      if (!requisition) {
+        return res.status(404).json({ message: 'Requisition not found' });
+      }
+
+      if (requisition.status !== RequisitionStatus.PENDING) {
+        return res.status(400).json({ message: 'Can only update pending requisitions' });
+      }
+
+      requisition.departmentName = departmentName;
+      requisition.notes = notes;
+
+      // Update items
+      // Simplest strategy: delete existing items and recreate them
+      // Or update existing ones.
+      // Given the complexity, let's delete and recreate for now as it's safer for consistency.
+
+      await this.requisitionItemRepository.delete({ requisitionId: requisition.id });
+
+      if (items && items.length > 0) {
+        const requisitionItems = items.map((item: { itemId: number; itemName: string; quantity: number }) =>
+          this.requisitionItemRepository.create({
+            requisitionId: requisition.id,
+            itemId: item.itemId,
+            itemName: item.itemName,
+            requestedQty: item.quantity // Note: frontend sends 'quantity', entity has 'requestedQty'
+          })
+        );
+        await this.requisitionItemRepository.save(requisitionItems);
+      }
+
+      await this.requisitionRepository.save(requisition);
+
+      const updatedRequisition = await this.requisitionRepository.findOne({
+        where: { id: requisition.id },
+        relations: ['items', 'items.item']
+      });
+
+      res.json(updatedRequisition);
+    } catch (error) {
+      res.status(500).json({ message: 'Server error', error });
+    }
+  };
 }

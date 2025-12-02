@@ -178,6 +178,18 @@ export const api = {
     return handleResponse(response);
   },
 
+  updateRequisition: async (id: number, requisitionData: any) => {
+    const response = await fetch(`${API_URL}/requisitions/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getToken()}`
+      },
+      body: JSON.stringify(requisitionData)
+    });
+    return handleResponse(response);
+  },
+
   forwardRequisition: async (id: number) => {
     const response = await fetch(`${API_URL}/requisitions/${id}/forward`, {
       method: 'PUT',
@@ -189,6 +201,14 @@ export const api = {
   cancelRequisition: async (id: number) => {
     const response = await fetch(`${API_URL}/requisitions/${id}/cancel`, {
       method: 'PUT',
+      headers: { 'Authorization': `Bearer ${getToken()}` }
+    });
+    return handleResponse(response);
+  },
+
+  deleteRequisition: async (id: number) => {
+    const response = await fetch(`${API_URL}/requisitions/${id}`, {
+      method: 'DELETE',
       headers: { 'Authorization': `Bearer ${getToken()}` }
     });
     return handleResponse(response);
@@ -261,6 +281,14 @@ export const api = {
         'Authorization': `Bearer ${getToken()}`
       },
       body: JSON.stringify(voucherData)
+    });
+    return handleResponse(response);
+  },
+
+  deleteIssuingVoucher: async (id: number) => {
+    const response = await fetch(`${API_URL}/issuing/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${getToken()}` }
     });
     return handleResponse(response);
   },

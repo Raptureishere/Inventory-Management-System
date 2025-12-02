@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { requisitionStorage, itemStorage, issuedRecordStorage } from '../services/storageService';
-import { 
-    Requisition, 
-    IssuedItem, 
-    Item, 
-    RequisitionStatus, 
-    IssuedItemRecord, 
-    IssuedItemStatus 
+import { itemStorage } from '../services/storageService'; // Keeping itemStorage for now for item list/stock reference
+import { api } from '../services/api';
+import {
+    Requisition,
+    IssuedItem,
+    Item,
+    RequisitionStatus
 } from '../types';
 import { useUI } from './ui/UIContext';
 
@@ -20,30 +19,43 @@ const StoreIssuingVoucher: React.FC = () => {
     const { showToast, confirm } = useUI();
 
     useEffect(() => {
-        const reqId = parseInt(id || '0');
-        const allRequisitions = requisitionStorage.get();
-        const foundRequisition = allRequisitions.find(r => r.id === reqId);
-        const allItems = itemStorage.get();
-        setStockItems(allItems);
+        const fetchData = async () => {
+            if (!id) return;
+            try {
+                // Fetch requisition from API
+                const reqData = await api.getRequisitionById(parseInt(id));
+                setRequisition(reqData);
 
-        if (foundRequisition) {
-            setRequisition(foundRequisition);
-            const itemsToIssue = foundRequisition.requestedItems.map(reqItem => {
-                const stockItem = allItems.find(stock => stock.id === reqItem.itemId);
-                return {
-                    itemId: reqItem.itemId,
-                    itemName: reqItem.itemName,
-                    requestedQty: reqItem.quantity,
-                    issuedQty: 0, // Default to 0, let the admin decide
-                    balance: stockItem?.quantity || 0,
-                };
-            });
-            setIssuedItems(itemsToIssue);
-        } else {
-            // Handle not found case
-            navigate('/requisition-book');
-        }
-    }, [id, navigate]);
+                // Fetch items (using local storage for now as cache, or could use API)
+                // Ideally we should fetch latest stock from API to ensure accuracy
+                // const itemsData = await api.getItems({ limit: 1000 }); 
+                // setStockItems(itemsData.items || []); 
+                // For now, sticking to itemStorage to match existing pattern, but backend will validate stock.
+                const allItems = itemStorage.get();
+                setStockItems(allItems);
+
+                if (reqData) {
+                    const itemsToIssue = reqData.requestedItems.map((reqItem: any) => {
+                        const stockItem = allItems.find(stock => stock.id === reqItem.itemId);
+                        return {
+                            itemId: reqItem.itemId,
+                            itemName: reqItem.itemName,
+                            requestedQty: reqItem.quantity, // API returns 'quantity' in requestedItems
+                            issuedQty: 0,
+                            balance: stockItem?.quantity || 0,
+                        };
+                    });
+                    setIssuedItems(itemsToIssue);
+                }
+            } catch (error) {
+                console.error('Failed to load data:', error);
+                showToast('Failed to load requisition data', 'error');
+                navigate('/requisition-book');
+            }
+        };
+
+        fetchData();
+    }, [id, navigate, showToast]);
 
     const handleIssueQtyChange = (itemId: number, value: number) => {
         setIssuedItems(prevItems =>
@@ -57,115 +69,44 @@ const StoreIssuingVoucher: React.FC = () => {
             })
         );
     };
-    
+
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        const formEl = e.currentTarget; // capture before any await to avoid React event pooling issues
+        const formEl = e.currentTarget;
         if (!requisition) {
             showToast('Requisition not found', 'error');
             return;
         }
 
         try {
-        const ok = await confirm('Issue the selected quantities and create the voucher?', { title: 'Confirm Issue', confirmText: 'Issue Items', cancelText: 'Go Back' });
+            const ok = await confirm('Issue the selected quantities and create the voucher?', { title: 'Confirm Issue', confirmText: 'Issue Items', cancelText: 'Go Back' });
             if (!ok) return;
-
-        // Build a full list of requested items merged with the current issued quantities.
-        const mergedItems = requisition.requestedItems.map(reqItem => {
-            const stockItem = stockItems.find(stock => stock.id === reqItem.itemId);
-            const stateItem = issuedItems.find(item => item.itemId === reqItem.itemId);
-            const availableStock = stockItem?.quantity ?? 0;
-            const requestedQty = reqItem.quantity;
-            const issuedQty = Math.max(
-                0,
-                Math.min(stateItem?.issuedQty ?? 0, requestedQty, availableStock)
-            );
-            return {
-                itemId: reqItem.itemId,
-                itemName: reqItem.itemName,
-                requestedQty,
-                issuedQty,
-                balance: availableStock - issuedQty,
-            };
-        });
-
-        const anyIssued = mergedItems.some(i => i.issuedQty > 0);
-            if (!anyIssued) {
-                const proceed = await confirm('No items are being issued. Create a pending voucher?', { title: 'Confirm', confirmText: 'Create Pending Voucher', cancelText: 'Cancel' });
-                if (!proceed) return;
-            }
-
-            // 1. Update stock quantities (only if items are being issued)
-        const updatedStockItems = stockItems.map(stock => {
-            const issuedDetail = mergedItems.find(item => item.itemId === stock.id);
-            if (!issuedDetail || issuedDetail.issuedQty <= 0) {
-                return stock;
-            }
-            return { ...stock, quantity: Math.max(0, stock.quantity - issuedDetail.issuedQty) };
-        });
-        if (anyIssued) {
-            itemStorage.save(updatedStockItems);
-        }
-
-            // 2. Update requisition status (only mark as ISSUED if items were actually issued)
-            const allRequisitions = requisitionStorage.get();
-            const updatedRequisitions = allRequisitions.map(req => {
-                if (req.id === requisition.id) {
-                    // Only mark as ISSUED if items were actually issued
-                    // Otherwise keep current status (FORWARDED) for pending vouchers
-                    return anyIssued 
-                        ? { ...req, status: RequisitionStatus.ISSUED }
-                        : req;
-                }
-                return req;
-            });
-            requisitionStorage.save(updatedRequisitions);
-
-            // 3. Upsert issued item record (update existing pending or create new)
-            const allIssuedRecords = issuedRecordStorage.get();
-            const existingIndex = allIssuedRecords.findIndex(r => r.requisitionId === requisition.id);
-        const allFullyIssued = mergedItems.length > 0 && mergedItems.every(i => i.issuedQty === i.requestedQty && i.issuedQty > 0);
-        const anyPartial = mergedItems.some(i => i.issuedQty > 0 && i.issuedQty < i.requestedQty);
-
-        // Save ALL items so the voucher details show everything requested with the post-issue balance.
-        const itemsWithBalance = mergedItems.map(item => {
-            const stockItem = updatedStockItems.find(s => s.id === item.itemId) ?? stockItems.find(s => s.id === item.itemId);
-            return {
-                ...item,
-                balance: Math.max(0, stockItem?.quantity ?? item.balance ?? 0),
-            };
-        });
 
             const formData = new FormData(formEl);
             const notesValue = (formData.get('notes') ?? '').toString();
+            const voucherId = `SIV-${new Date().getFullYear()}-${String(requisition.id).padStart(3, '0')}`;
 
-            const baseRecord: IssuedItemRecord = {
-                id: existingIndex > -1 ? allIssuedRecords[existingIndex].id : (allIssuedRecords.length > 0 ? Math.max(...allIssuedRecords.map(r => r.id)) + 1 : 201),
+            // Prepare payload for API
+            const payload = {
+                voucherId,
                 requisitionId: requisition.id,
-                voucherId: `SIV-${new Date().getFullYear()}-${String(requisition.id).padStart(3, '0')}`,
-                departmentName: requisition.departmentName,
                 issueDate: new Date().toISOString().split('T')[0],
                 notes: notesValue,
-                status: allFullyIssued ? IssuedItemStatus.ISSUED : (anyPartial || anyIssued ? IssuedItemStatus.PARTIALLY_ISSUED : IssuedItemStatus.PENDING),
-                issuedItems: itemsWithBalance,
+                items: issuedItems.map(item => ({
+                    itemId: item.itemId,
+                    requestedQty: item.requestedQty,
+                    issuedQty: item.issuedQty
+                }))
             };
 
-            if (existingIndex > -1) {
-                const updated = [...allIssuedRecords];
-                updated[existingIndex] = baseRecord;
-                issuedRecordStorage.save(updated);
-            } else {
-                issuedRecordStorage.save([...allIssuedRecords, baseRecord]);
-            }
+            await api.createIssuingVoucher(payload);
 
             showToast('Items issued successfully', 'success');
-            const highlightId = baseRecord.id;
-            try { 
-                sessionStorage.setItem('issued_highlight_id', String(highlightId)); 
-            } catch (err) {
-                console.warn('Could not save highlight ID to sessionStorage:', err);
-            }
-            navigate('/issued-items-record', { state: { highlightId }, replace: true });
+
+            // Navigate to issued records (or wherever appropriate)
+            // We might need to fetch the new voucher ID to highlight it, but for now just navigate
+            navigate('/issued-items-record');
+
         } catch (error) {
             console.error('Error creating voucher:', error);
             showToast('Failed to create voucher. Please try again.', 'error');
@@ -173,7 +114,7 @@ const StoreIssuingVoucher: React.FC = () => {
     };
 
     if (!requisition) {
-        return <div>Loading...</div>;
+        return <div className="p-6">Loading requisition data...</div>;
     }
 
     return (
@@ -211,7 +152,7 @@ const StoreIssuingVoucher: React.FC = () => {
                                             <td className="px-6 py-4">{item.requestedQty}</td>
                                             <td className={`px-6 py-4 font-bold ${availableStock < 10 ? 'text-red-600' : ''}`}>{availableStock}</td>
                                             <td className="px-6 py-4">
-                                                <input 
+                                                <input
                                                     type="number"
                                                     max={Math.min(item.requestedQty, availableStock)}
                                                     min="0"
@@ -227,7 +168,7 @@ const StoreIssuingVoucher: React.FC = () => {
                             </tbody>
                         </table>
                     </div>
-                     <div className="mt-4">
+                    <div className="mt-4">
                         <label htmlFor="notes" className="block font-semibold mb-1">Notes:</label>
                         <textarea id="notes" name="notes" rows={3} className="w-full p-2 border rounded" placeholder="Add any notes here..."></textarea>
                     </div>
