@@ -21,13 +21,13 @@
 
 #### Configuration:
 - PORT: 5000
-- CORS: Configured for `http://localhost:3000`
+- CORS: Configured for `http://localhost:8000`
 - Database: Seeded with users, suppliers, and inventory items
 - JWT: Configured with 24h expiration
 
 ---
 
-### ✅ Frontend (Port 3000)
+### ✅ Frontend (Port 8000)
 **Status:** Running  
 **Build:** ✅ Vite builds successfully (856 modules)  
 **API Integration:** ✅ Connected to backend  
@@ -100,7 +100,7 @@
 
 | Service | URL | Status |
 |---------|-----|--------|
-| Frontend | http://localhost:3000 | ✅ Running |
+| Frontend | http://localhost:8000 | ✅ Running |
 | Backend API | http://localhost:5000/api/v1 | ✅ Running |
 | Health Check | http://localhost:5000/health | ✅ Responding |
 | API Documentation | http://localhost:5000/api/v1 | ✅ Available |
@@ -234,7 +234,7 @@ Restarts: Auto-reload enabled
 ### Frontend Server
 ```bash
 Process: Running (Vite)
-Port: 3000
+Port: 8000
 Status: Serving
 Hot Reload: Enabled
 ```
@@ -243,7 +243,7 @@ Hot Reload: Enabled
 
 ## 🎓 How to Use
 
-1. **Access the application:** http://localhost:3000
+1. **Access the application:** http://localhost:8000
 2. **Login** with:
    - Admin: `admin` / `admin123`
    - User: `sub` / `sub123`

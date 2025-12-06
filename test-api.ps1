@@ -54,7 +54,7 @@ try {
 
 Write-Host "`nFrontend Status..." -ForegroundColor Cyan
 try {
-    $frontend = Invoke-WebRequest -Uri 'http://localhost:3000' -Method GET -UseBasicParsing -TimeoutSec 5
+    $frontend = Invoke-WebRequest -Uri 'http://localhost:8000' -Method GET -UseBasicParsing -TimeoutSec 5
     Write-Host "✅ Frontend: " -ForegroundColor Green -NoNewline
     Write-Host "Responding (Status: $($frontend.StatusCode))" -ForegroundColor White
 } catch {
@@ -66,6 +66,6 @@ Write-Host "============================================" -ForegroundColor Yello
 Write-Host "System Status Summary" -ForegroundColor Yellow
 Write-Host "============================================" -ForegroundColor Yellow
 Write-Host "Backend:  http://localhost:5000" -ForegroundColor Cyan
-Write-Host "Frontend: http://localhost:3000" -ForegroundColor Cyan
+Write-Host "Frontend: http://localhost:8000" -ForegroundColor Cyan
 Write-Host "Health:   http://localhost:5000/health" -ForegroundColor Cyan
 Write-Host "API Docs: http://localhost:5000/api/v1" -ForegroundColor Cyan
